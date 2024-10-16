@@ -1,9 +1,8 @@
 
-from james_bond.agents.ephemeral_tool_agent import EphemeralToolAgent
+from JB007.base.ephemeral_tool_agent import EphemeralToolAgent
 
-from langchain_core.messages import AIMessage, HumanMessage
 from langchain.agents import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages.base import BaseMessage
 from langchain_core.runnables import RunnableLambda
 from langchain.agents import AgentExecutor

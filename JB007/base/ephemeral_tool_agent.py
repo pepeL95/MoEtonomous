@@ -1,6 +1,6 @@
 from typing import List
 from langchain_community.llms import BaseLLM
-from james_bond.agents.agent import Agent
+from JB007.base.agent import Agent
 from langchain_core.tools import BaseTool
 from langchain_core.runnables import RunnableLambda
 from langchain_core.prompts import ChatPromptTemplate

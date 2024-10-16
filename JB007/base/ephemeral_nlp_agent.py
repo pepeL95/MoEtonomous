@@ -1,12 +1,13 @@
-from james_bond.agents.agent import Agent
+from JB007.base.agent import Agent
 
 from typing import Union, List
+
 from langchain_community.llms import BaseLLM
 from langchain_core.messages.base import BaseMessage
+from langchain_core.runnables import RunnablePassthrough
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate, PromptTemplate
-from langchain_core.runnables import RunnablePassthrough
 
 class EphemeralNLPAgent(Agent):
     '''Multimodal conversational agent without memory.'''
@@ -22,52 +23,6 @@ class EphemeralNLPAgent(Agent):
         super().__init__(name, llm=llm, system_prompt=system_prompt, prompt_template=prompt_template, parser=parser)
         self._supported_convo_keys = set(["text", "image_url"])
         # Init agent
-        self._make_agent()
-    
-
-################################################### GETTERS #####################################################
-
-
-    @property
-    def llm(self):
-        return self._llm
-
-    @property
-    def prompt_template(self):
-        return self._prompt_template
-    
-    @property
-    def system_prompt(self):
-        return self._system_prompt
-    
-    @property
-    def parser(self):
-        return self._parser
-    
-    @property
-    def name(self):
-        return self._name
-
-################################################## SETTERS #####################################################
-
-    @llm.setter
-    def llm(self, llm):
-        self._llm = llm
-        self._make_agent()
-
-    @prompt_template.setter
-    def prompt_template(self, prompt_template):
-        self._prompt_template = prompt_template
-        self._make_agent()
-    
-    @system_prompt.setter
-    def system_prompt(self, system_prompt):
-        self._system_prompt = system_prompt
-        self._make_agent()
-
-    @parser.setter
-    def parser(self, parser):
-        self._parser = parser
         self._make_agent()
 
 ######################################## PRIVATE METHODS #########################################################
@@ -271,13 +226,9 @@ class EphemeralNLPAgent(Agent):
     def get_chain(self):
         return super().get_chain()
     
-    def invoke(self, input: Union[str, dict, List[dict], BaseMessage, List[BaseMessage]]):
-        if not self._prompt_template:
-            return self._invoke_without_prompt_template(input)
-        return self._invoke_with_prompt_template(input)
+    def invoke(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
+        return super().invoke(input)
     
-    def stream(self, input: Union[str, dict, List[dict], BaseMessage, List[BaseMessage]]):
-        if not self._prompt_template:
-            return self._invoke_without_prompt_template(input=input, stream=True)
-        return self._invoke_with_prompt_template(input=input, stream=True)
+    def stream(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
+        return super().stream(input)
         

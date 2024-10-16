@@ -1,11 +1,11 @@
 from typing import List
 from langchain_community.llms import BaseLLM
 from langchain_core.messages.base import BaseMessage
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate, PromptTemplate
 
-from james_bond.agents.ephemeral_nlp_agent import EphemeralNLPAgent
+from JB007.base.ephemeral_nlp_agent import EphemeralNLPAgent
 
 class PersistentNLPAgent(EphemeralNLPAgent):
     '''Multimodal conversational agent without memory.'''
