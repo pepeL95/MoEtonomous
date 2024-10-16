@@ -1,3 +1,4 @@
+from langchain_core.messages import BaseMessage
 from JB007.base.agent import Agent
 
 from typing import List
@@ -67,12 +68,8 @@ class EphemeralReactAgent(Agent):
     def get_chain(self):
         return super().get_chain()
     
-    def invoke(self, input_object):
-        """Invoke agentic chain."""
-        agent_executor = AgentExecutor(agent=self._agent, tools=self._tools, verbose=self._verbose, handle_parsing_errors=True)
-        if self._parser is not None:
-            agent_executor = (
-                agent_executor
-                | RunnableLambda(lambda response: response["output"]) | self._parser
-            )
-        return agent_executor.invoke(input_object)
+    def invoke(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
+        return super().invoke(input)
+    
+    def stream(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
+        return super().stream(input)
