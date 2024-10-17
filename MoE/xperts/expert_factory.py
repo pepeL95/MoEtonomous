@@ -1,4 +1,4 @@
-from MoE.experts.expert_repo import ExpertRepo
+from MoE.xperts.expert_repo import ExpertRepo
 from dev_tools.enums.llms import LLMs
 
 class ExpertFactory:
