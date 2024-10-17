@@ -1,4 +1,7 @@
+from JB007.base.ephemeral_nlp_agent import EphemeralNLPAgent
+
 from typing import List
+
 from langchain_community.llms import BaseLLM
 from langchain_core.messages.base import BaseMessage
 from langchain_core.runnables import RunnablePassthrough
@@ -6,7 +9,6 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate, PromptTemplate
 
-from JB007.base.ephemeral_nlp_agent import EphemeralNLPAgent
 
 class PersistentNLPAgent(EphemeralNLPAgent):
     '''Multimodal conversational agent without memory.'''
