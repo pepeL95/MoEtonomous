@@ -9,10 +9,11 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 
 from MoE.base.router import Router
-from MoE.configs.debug import Debug
+from MoE.base.expert import Expert
+from MoE.config.debug import Debug
+
 from dev_tools.utils.clifont import CLIFont, print_bold
 
-from MoE.base.expert import Expert
 
 class MoE:
     class State(TypedDict):
@@ -32,7 +33,7 @@ class MoE:
     experts:List[Expert],
     description:str=None,
     verbose:Debug.Verbosity=Debug.Verbosity.quiet) -> None:
-        self.experts = OrderedDict()
+        self.experts = OrderedDict() # {expert_name: expert}
         for expert in experts:
             self.experts[expert.name] = expert
         self.name = name
@@ -88,10 +89,18 @@ class MoE:
 
         # Router is required
         if not self.router:
-            raise ValueError('gate_keeper cannot be None. Make sure you initialize it in your specific mixture __init__() method.')
+            raise ValueError('`self.router` cannot be None. Make sure you initialize it in your specific mixture __init__() method.')
 
-        # If an expert defines where to go, go there (but avoid infinite loops)
-        if state['next'] is not None and state['next'] != state['prev']:
+        # Next state must be valid
+        if state['next'] not in self.experts:
+            raise ValueError(f'Next state is not defined in the mixture. Must be one of {self.experts.keys()}, but got {state['next']}')
+
+        # Avoid infinite loops
+        if state['next'] == state['prev']:
+            state['next'] = self.router.name
+        
+        # If xpert decided where to go next, go there
+        if state['next'] != self.router.name:
             return state
 
         # Build scratchpad
@@ -109,27 +118,27 @@ class MoE:
         })
 
         # Extract expert and expert input
-        xpert, xpert_input = self._parse_router_output(output)
+        xpert_name, xpert_input = self._parse_router_output(output)
         
         # Debug verbosity
         if self.verbose is Debug.Verbosity.low:
-            print_bold(f'Result: {CLIFont.purple}Calling `{xpert}` with input `{xpert_input}`\n')
-        
+            print_bold(f'Result: {CLIFont.purple}Calling `{xpert_name}` with input `{xpert_input}`\n')
+            
         if self.verbose is Debug.Verbosity.high:
             print_bold(f'Scratchpad: {CLIFont.blue}{scratchpad}')
             print_bold(f'Output: {CLIFont.blue}{output}\n')
-            print_bold(f'Result: {CLIFont.purple}Calling `{xpert}` with input `{xpert_input}`\n')
+            print_bold(f'Result: {CLIFont.purple}Calling `{xpert_name}` with input `{xpert_input}`\n')
             
         # Final answer?
-        if xpert == 'END':
-            return {"next": xpert, "expert_output": xpert_input, "router_scratchpad": output, "prev": self.router.name}
+        if xpert_name == 'END':
+            return {"next": 'END', "expert_output": xpert_input, "router_scratchpad": output, "prev": self.router.name}
 
         # Sanity check
-        if xpert not in self.experts.keys():
-            raise ValueError(f"""Classifier must return one of {self.experts.keys()}. Instead, got '{xpert}'.""")
+        if xpert_name not in self.experts:
+            raise ValueError(f"""`self.router` must return one of {self.experts.keys()}. But got `{xpert_name}` instead.""")
 
         # Update state
-        state["next"] = xpert
+        state["next"] = xpert_name
         state["expert_input"] = xpert_input
         state["prev"] = self.router.name
         state["router_scratchpad"] = output
@@ -149,6 +158,11 @@ class MoE:
         update['prev'] = xpert.name
         update['ephemeral_mem'].add_messages([xpert_in, xpert_out])
         
+        # Debug verbosity
+        if self.verbose > Debug.Verbosity.quiet:
+            print_bold(f'Expert Responded: {CLIFont.light_green}`{state['expert_output']}`{CLIFont.reset}`\n')
+            print_bold(f'Next: {CLIFont.purple}Calling `{state['next']}`\n')
+
         return update
 
     def build_MoE(self):
@@ -189,7 +203,7 @@ class MoE:
         assert 'input' in input, f"Missing required `input` key when invoking {self.name}."
 
         # Set up defaults
-        input.setdefault("next", None)
+        input.setdefault("next", self.router.name)
         input.setdefault("prev", None)
         input.setdefault("expert_input", None)
         input.setdefault("expert_output", None)
