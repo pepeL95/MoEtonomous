@@ -34,6 +34,7 @@ class Agent:
     @property
     def name(self):
         return self._name
+    
 ################################################## SETTERS #####################################################
 
     @llm.setter

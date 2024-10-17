@@ -1,6 +1,7 @@
 from typing import List
 from langchain_community.llms import BaseLLM
 from langchain_core.messages.base import BaseMessage
+from langchain_core.runnables import RunnablePassthrough
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate, PromptTemplate
@@ -36,23 +37,26 @@ class PersistentNLPAgent(EphemeralNLPAgent):
             if key == 'chat_history':
                 return obj[key]
         return []
-        
+    
+    @classmethod
+    def _compile_template_vars(cls, input):
+            # Extract chat_history
+            if chat_history := cls._extract_chat_history(input):
+                cls._validate_chat_history_is_list_base_messages(chat_history)
+
+            # Get formatted messages
+            filtered_input = [input_obj for input_obj in input if 'chat_history' not in input_obj]
+            chat_messages = super()._compile_template_vars(filtered_input)
+            
+            # Note: chat_messages[1] gives precisely the chat_history template (see make_agent())
+            chat_messages[1] = chat_messages[1].format_messages(chat_history=chat_history)
+            ret = chat_messages[:1] + chat_messages[1] + chat_messages[2:]
+            return ret
+    
+
 ######################################## PRIVATE METHODS #########################################################
 
-    def _compile_template_vars(self, input):
-        # Extract chat_history
-        if chat_history := self._extract_chat_history(input):
-            self._validate_chat_history_is_list_base_messages(chat_history)
 
-        # Get formatted messages
-        filtered_input = [input_obj for input_obj in input if 'chat_history' not in input_obj]
-        chat_messages = super()._compile_template_vars(filtered_input)
-        
-        # Note: chat_messages[1] gives precisely the chat_history template (see make_agent())
-        chat_messages[1] = chat_messages[1].format_messages(chat_history=chat_history)
-        ret = chat_messages[:1] + chat_messages[1] + chat_messages[2:]
-        return ret
-    
     def _make_agent(self):
         '''Multimodal conversational agent using Langchain.'''
         if self._system_prompt is None and self._prompt_template is None:
@@ -61,8 +65,14 @@ class PersistentNLPAgent(EphemeralNLPAgent):
         # Only a prompt template provided (i.e. no system_prompt)
         if self._system_prompt is None and self._prompt_template is not None:
             prompt = PromptTemplate.from_template(self._prompt_template)
+
             # To parse, or not to parse, that is the question
-            self._agent = (prompt | self.llm | self._parser) if self.parser is not None else (prompt | self.llm)
+            if self.parser is None:
+                self.parser = RunnablePassthrough()
+
+            # Create chain
+            self._agent = prompt | self.llm | self._parser
+
             # All done here...
             return
 
@@ -99,7 +109,10 @@ class PersistentNLPAgent(EphemeralNLPAgent):
         )
 
         # To parse, or not to parse, that is the question
-        self._agent = (prompt | self.llm | self._parser) if self.parser is not None else (prompt | self.llm)
+        if self.parser is None:
+            self.parser = RunnablePassthrough()
+
+        self._agent = prompt | self.llm | self._parser
 
     def _invoke_with_prompt_template(self, input: str | dict | List[dict], stream=False):
         # Input as a dict
@@ -109,16 +122,26 @@ class PersistentNLPAgent(EphemeralNLPAgent):
                 self._validate_chat_history_is_list_base_messages(chat_history)
             
             # To stream, or not to stream, that is the question
-            return self._print_stream(input) if stream else self._agent.invoke(input)  
+            if stream:
+                return self._agent.stream(input)
+            return self._agent.invoke(input)
+            
 
         # Input as a List[dict]
         if isinstance(input, list) and all(isinstance(element, dict) for element in input):
             chat_messages = self._compile_template_vars(input)
-            # Temporary update chat template
-            temp_agent = ChatPromptTemplate.from_messages(chat_messages) | self.llm
+            
             # To parse, or not to parse, that is the question
-            if self._parser: temp_agent = temp_agent | self._parser
-            return temp_agent.invoke({})
+            if self.parser is None:
+                self.parser = RunnablePassthrough()
+            
+            # Temporary update chat template
+            anonymous_chain = ChatPromptTemplate.from_messages(chat_messages) | self.llm | self._parser
+
+            # To stream, or not to stream, that is the question
+            if stream:
+                return anonymous_chain.stream({})
+            return anonymous_chain.invoke({})
 
         # Invalid format for input provided
         else:
@@ -176,15 +199,9 @@ class PersistentNLPAgent(EphemeralNLPAgent):
             raise ValueError(f"Incorrect type for input_object: Should be one of Union[List[BaseMessage], List[dict]]), but was given {type(input)}")
         
         # To stream, or not to stream, that is the question
-        return self._print_stream(input_object) if stream else self._agent.invoke(input_object)
-
-    def _print_stream(self, input):
-        result = []
-        for token in self._agent.stream(input):
-            result.append(token)
-            print(token, end='', flush=True)
-        print('\n')
-        return ''.join(result)
+        if stream:
+            return self._agent.stream(input_object)
+        return self._agent.invoke(input_object)
 
 ############################################# PUBLIC METHODS ####################################################
     
@@ -193,3 +210,6 @@ class PersistentNLPAgent(EphemeralNLPAgent):
     
     def stream(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
         return super().stream(input)
+    
+    def get_chain(self):
+        return super().get_chain()

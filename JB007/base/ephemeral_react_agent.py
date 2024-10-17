@@ -57,6 +57,9 @@ class EphemeralReactAgent(Agent):
                 agent_executor
                 | RunnableLambda(lambda response: response["output"]) | self._parser
             )
+
+        if stream:
+            return agent_executor.stream(input)
         return agent_executor.invoke(input)
     
     def _invoke_without_prompt_template(self, input, stream):
