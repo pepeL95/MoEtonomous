@@ -1,53 +1,48 @@
 
 from JB007.base.ephemeral_tool_agent import EphemeralToolAgent
 
-from langchain.agents import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages.base import BaseMessage
-from langchain_core.runnables import RunnableLambda
-from langchain.agents import AgentExecutor
 from typing import List
+
+from langchain.agents import AgentExecutor
+from langchain_core.runnables import RunnableLambda
+from langchain_core.messages.base import BaseMessage
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.agents import create_tool_calling_agent
+from langchain_core.runnables import RunnablePassthrough
 
 class PersistentToolAgent(EphemeralToolAgent):
     def __init__(self, name, llm, tools, system_prompt=None, prompt_template=None, verbose=False, parser=None, is_silent_caller=True):
         super().__init__(name, llm=llm, system_prompt=system_prompt, tools=tools, prompt_template=prompt_template, verbose=verbose, parser=parser, is_silent_caller=is_silent_caller)
+
+######################################## PRIVATE METHODS #########################################################
 
     def _make_agent(self):
         """Create a tool_calling_agent using Langchain."""
         if self._prompt_template is None and self._system_prompt is None:
             raise ValueError("Must have at least one of Union[system_prompt, prompt_template].")
         
-        # Build prompt
-        human_template = ("human", "{input}")
-        if self._prompt_template is not None and self._system_prompt is not None:
-            human_template = ("human", self._prompt_template)
-        
-        elif self._prompt_template is not None and self._system_prompt is None:
+        if self._system_prompt is None:
             prompt = ChatPromptTemplate.from_messages([
-                self._prompt_template,
-                ("placeholder", "{agent_scratchpad}"),
-                ])
-            
-            if self._is_silent_caller:
-                self._agent = create_tool_calling_agent(self._llm, self._tools, prompt) | self._identity_fn
-            else:
-                self._agent = create_tool_calling_agent(self._llm, self._tools, prompt)
-            return
-        
-        prompt = ChatPromptTemplate.from_messages([
-                ("system", self._system_prompt),
                 ("placeholder", "{chat_history}"),
-                human_template,
+                ("human", self._prompt_template or "{input}"),
                 ("placeholder", "{agent_scratchpad}"),
                 ])
         
+        if self._system_prompt is not None:            
+            prompt = ChatPromptTemplate.from_messages([
+                    ("system", self._system_prompt),
+                    ("placeholder", "{chat_history}"),
+                    ("human", self._prompt_template or "{input}"),
+                    ("placeholder", "{agent_scratchpad}"),
+                    ])
+            
         if self._is_silent_caller:
             self._agent = create_tool_calling_agent(self._llm, self._tools, prompt) | self._identity_fn
         else:
             self._agent = create_tool_calling_agent(self._llm, self._tools, prompt)
 
-    def invoke(self, input: str | dict | List[BaseMessage]):
-        """Invoke agentic chain."""
+
+    def _invoke_with_prompt_template(self, input, stream):
         if any([isinstance(input, str), isinstance(input, dict)]):
             input_object = input
         
@@ -58,20 +53,37 @@ class PersistentToolAgent(EphemeralToolAgent):
             raise ValueError(f'Input must be one of Union[str, dict, List[BaseMessage]]. Got {type(input)}')
 
         agent_executor = AgentExecutor(agent=self._agent, tools=self._tools, verbose=self._verbose, handle_parsing_errors=True)
-        if self._parser is not None:
-            agent_executor = (
-                agent_executor
-                | RunnableLambda(lambda response: response["output"]) | self._parser
-            )
         
-        ret = agent_executor.invoke(input_object)
+        # To parse, or not to parse, that is the question
+        if self.parser is None:
+            self.parser = RunnablePassthrough()
+
+        agent_executor = (
+            agent_executor
+            | RunnableLambda(lambda response: response["output"]) | self._parser
+        )
+        
+        # To stream, or not to stream, that is the question
+        if stream:
+            ret = self._agent.stream(input_object)
+            return ret
+        ret = self._agent.invoke(input_object)
         return ret
+    
+
+    def _invoke_without_prompt_template(self, input, stream):
+        return self._invoke_with_prompt_template(input, stream)
+
+
+######################################## PUBLIC METHODS #########################################################
+
+
+    def invoke(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
+        return super().invoke(input)
         
     def get_chain(self):
-        ret = super().get_chain()
-        return ret
+        return super().get_chain()
 
-    def stream(self, input_object):
-        ret = super().stream(input_object)
-        return ret
+    def stream(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
+        return super().stream(input)
     
