@@ -92,7 +92,7 @@ class MoE:
             raise ValueError('`self.router` cannot be None. Make sure you initialize it in your specific mixture __init__() method.')
 
         # Next state must be valid
-        if state['next'] not in self.experts:
+        if state['next'] not in self.experts.keys() | {self.router.name}:
             raise ValueError(f'Next state is not defined in the mixture. Must be one of {self.experts.keys()}, but got {state['next']}')
 
         # Avoid infinite loops
@@ -134,7 +134,7 @@ class MoE:
             return {"next": 'END', "expert_output": xpert_input, "router_scratchpad": output, "prev": self.router.name}
 
         # Sanity check
-        if xpert_name not in self.experts:
+        if xpert_name not in self.experts.keys():
             raise ValueError(f"""`self.router` must return one of {self.experts.keys()}. But got `{xpert_name}` instead.""")
 
         # Update state
