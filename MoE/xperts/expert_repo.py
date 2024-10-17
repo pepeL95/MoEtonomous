@@ -5,7 +5,7 @@ from MoE.base.expert import Expert
 from MoE.base.router import Router
 from MoE.prompts.prompt_repo import PromptRepo
 
-from rag.base.cross_encoding_reranker import CrossEncodingReranker
+from RAG.base.cross_encoding_reranker import CrossEncodingReranker
 
 from JB007.toolbox.toolbox import ToolRepo
 from JB007.base.ephemeral_nlp_agent import EphemeralNLPAgent
