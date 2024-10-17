@@ -1,4 +1,4 @@
-from dev_tools.utils.parsers import StringParser
+from JB007.parsers.generic import StringParser
 
 import math
 import torch

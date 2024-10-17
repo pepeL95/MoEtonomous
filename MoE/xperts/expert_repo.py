@@ -5,13 +5,13 @@ from MoE.base.expert import Expert
 from MoE.base.router import Router
 from MoE.prompts.prompt_repo import PromptRepo
 
-from rag.utils.cross_encoding_reranker import CrossEncodingReranker
+from rag.base.cross_encoding_reranker import CrossEncodingReranker
 
-from james_bond.tools.tool_repo import ToolRepo
-from james_bond.agents.ephemeral_nlp_agent import EphemeralNLPAgent
-from james_bond.agents.persistent_nlp_agent import PersistentNLPAgent
-from james_bond.agents.persistent_tool_agent import PersistentToolAgent
-from james_bond.agentic_solutions.advanced_rag_flow_v0_1.schema import Schema
+from JB007.toolbox.toolbox import ToolRepo
+from JB007.base.ephemeral_nlp_agent import EphemeralNLPAgent
+from JB007.base.persistent_nlp_agent import PersistentNLPAgent
+from JB007.base.persistent_tool_agent import PersistentToolAgent
+from JB007.parsers.pydantic import Schema
 
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.vectorstores import VectorStoreRetriever
