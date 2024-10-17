@@ -77,7 +77,6 @@ class PersistentToolAgent(EphemeralToolAgent):
 
 ######################################## PUBLIC METHODS #########################################################
 
-
     def invoke(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
         return super().invoke(input)
         
