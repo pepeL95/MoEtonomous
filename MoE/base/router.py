@@ -1,4 +1,4 @@
-from james_bond.agents.agent import Agent
+from JB007.base.agent import Agent
 from langchain_core.runnables import RunnableLambda
 
 class Router:

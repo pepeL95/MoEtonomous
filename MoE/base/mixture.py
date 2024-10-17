@@ -9,8 +9,8 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 
 from MoE.base.router import Router
-from MoE.configs.debug_config import Debug
-from dev_tools.utils.shell_utils import ShellFont, print_bold
+from MoE.configs.debug import Debug
+from dev_tools.utils.clifont import CLIFont, print_bold
 
 from MoE.base.expert import Expert
 
@@ -113,12 +113,12 @@ class MoE:
         
         # Debug verbosity
         if self.verbose is Debug.Verbosity.low:
-            print_bold(f'Result: {ShellFont.purple}Calling `{xpert}` with input `{xpert_input}`\n')
+            print_bold(f'Result: {CLIFont.purple}Calling `{xpert}` with input `{xpert_input}`\n')
         
         if self.verbose is Debug.Verbosity.high:
-            print_bold(f'Scratchpad: {ShellFont.blue}{scratchpad}')
-            print_bold(f'Output: {ShellFont.blue}{output}\n')
-            print_bold(f'Result: {ShellFont.purple}Calling `{xpert}` with input `{xpert_input}`\n')
+            print_bold(f'Scratchpad: {CLIFont.blue}{scratchpad}')
+            print_bold(f'Output: {CLIFont.blue}{output}\n')
+            print_bold(f'Result: {CLIFont.purple}Calling `{xpert}` with input `{xpert_input}`\n')
             
         # Final answer?
         if xpert == 'END':

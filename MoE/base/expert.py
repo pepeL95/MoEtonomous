@@ -1,4 +1,4 @@
-from james_bond.agents.agent import Agent
+from JB007.base.agent import Agent
 from typing import Any
 
 class Expert:
