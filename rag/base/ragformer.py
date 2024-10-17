@@ -1,4 +1,4 @@
-from dev_tools.utils.tool_utils import format_documents
+from dev_tools.utils.parsers import StringParser
 
 import math
 import torch
@@ -91,7 +91,7 @@ class RagFormer:
         relevant_docs = [Document(page_content=self.docs[idx], id=str(idx)) for idx in args[:k]]
         # Display results
         if verbose:
-            print(format_documents(relevant_docs))
+            print(StringParser.from_langdocs(relevant_docs))
                 
         return relevant_docs
                 
