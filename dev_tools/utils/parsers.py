@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 
 class StringParser:
     @classmethod
-    def from_langdocs(cls, docs: List[Document] | List[str]) -> str:
+    def from_langdocs(cls, docs: List[Document]) -> str:
         if docs and isinstance(docs[0], Document):
             return '\n\n'.join(doc.page_content for doc in docs)
         return '\n\n'.join(docs)
@@ -34,9 +34,6 @@ class ArxivParser:
     class XMLParser:
         @classmethod
         def to_dict(cls, xml_string: str) -> dict:
-            '''
-            This helper parses an xml string into a dictionary
-            '''
             # Parse XML string
             root = ET.fromstring(xml_string)
             # Define namespace
