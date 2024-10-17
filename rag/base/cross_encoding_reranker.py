@@ -1,13 +1,10 @@
-from dev_tools.utils.tool_utils import format_documents 
-from dev_tools.utils.shell_utils import ShellFont, print_bold
+from dev_tools.utils.clifont import CLIFont, print_bold
 
 from langchain_core.runnables import RunnableLambda
 from langchain_core.documents.base import Document
 
 import numpy as np
 import functools
-
-from typing import Union, List
 
 class CrossEncodingReranker:
     def __init__(self, cross_encoder):
@@ -46,7 +43,7 @@ class CrossEncodingReranker:
             # Display results
             if verbose:
                 for document in relevant_documents:
-                    print_bold(f'\n{ShellFont.light_green}{document}')
+                    print_bold(f'\n{CLIFont.light_green}{document}')
                     print('*' * 100)
             return relevant_documents
         
