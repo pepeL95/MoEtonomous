@@ -41,6 +41,7 @@ class PretrievalMoE(MoE):
                 'context':  state['kwargs'].get('context', ''),
             })
             outputs.append(local_output)
-        state['expert_output'] = outputs
+        state['expert_output'] = "Successfully generated hypothetical documents."
+        state['kwargs']['hyde'] = outputs
         state['next'] = 'END'
         return state

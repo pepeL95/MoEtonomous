@@ -32,7 +32,7 @@ class ModularRAGMoE(MoE):
             }
         })    
         state['expert_output'] = "Successfully finished the pre-retrieval step of the RAG pipeline."
-        state['kwargs']['hyde'] = output['expert_output']
+        state['kwargs']['hyde'] = output['kwargs']['hyde']
         state['kwargs']['search_queries'] = output['kwargs']['search_queries']
         state['next'] = ExpertFactory.Directory.RetrieverExpert
         return state
