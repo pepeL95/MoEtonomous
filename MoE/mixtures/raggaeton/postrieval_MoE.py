@@ -4,9 +4,11 @@ from MoE.base.router import Router
 from MoE.config.debug import Debug
 from MoE.base.mixture import MoE
 
+from JB007.parsers.generic import StringParser
+
 from typing import List
 
-class PostrievalMoE:
+class PostrievalMoE(MoE):
     '''Modular class for handling the  post-retrieval step of a non-naive RAG pipeline'''
 
     def __init__(self, name: str, router: Router, experts: List[Expert], description: str = None, verbose: Debug.Verbosity = Debug.Verbosity.quiet) -> None:
@@ -15,27 +17,12 @@ class PostrievalMoE:
     #########################################################################################################################
 
     def define_xpert_impl(self, state: MoE.State, xpert: Expert) -> dict:
-        if xpert.name == ExpertFactory.Directory.RetrieverExpert:
-            return self.run_retriever_expert(state, xpert)
         if xpert.name == ExpertFactory.Directory.RerankingExpert:
             return self.run_reranking_expert(state, xpert)
         if xpert.name == ExpertFactory.Directory.ContextExpert:
-            return self.run_content_expert(state, xpert)
+            return self.run_context_expert(state, xpert)
     
     ########################################### POST-RETRIEVAL ##############################################################################
-
-    def run_retriever_expert(self, state:MoE.State, xpert:Expert):
-        # # n-d array with the top 10 documents per search query
-        outputs = [] 
-        for _q in state['kwargs']['hyde']:
-            local_outputs = xpert.invoke(_q)
-            outputs.append(local_outputs)
-
-        state['expert_output'] = 'Successfully retrieved relevant documents.'
-        state['kwargs']['context'] = outputs
-        state['next'] = ExpertFactory.Directory.RerankingExpert
-        return state
-    
 
     def run_reranking_expert(self, state:MoE.State, xpert:Expert):
         if not 'context' in state['kwargs']:
@@ -50,8 +37,18 @@ class PostrievalMoE:
             })
             outputs.update(local_outputs)
         
-        # state['kwargs']['context'] = format_documents(list(outputs))
-        state['kwargs']['context'] = outputs
+        state['kwargs']['context'] = StringParser.from_langdocs(list(outputs))
         state['expert_output'] = state['kwargs']['context']
         state['next'] = ExpertFactory.Directory.ContextExpert
+        return state
+    
+    def run_context_expert(self, state:MoE.State, xpert:Expert):
+        output = xpert.invoke({
+            'input': state['expert_input'],
+            'topic': state['kwargs'].get('topic', 'No specific topic, go ahead and imply it as best as you can from the query'),
+            'context': state['kwargs']['context']
+        })
+
+        state['expert_output'] = output
+        state['next'] = 'END'
         return state

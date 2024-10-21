@@ -299,7 +299,7 @@ class RAPTOR:
         for i in all_clusters:
             df_cluster = expanded_df[expanded_df["cluster"] == i]
             formatted_txt = self._fmt_txt(df_cluster)
-            summaries.append(chain.invoke({"context": formatted_txt}))
+            summaries.append(chain.invoke({"input": formatted_txt}))
 
         df_summary = pd.DataFrame(
             {

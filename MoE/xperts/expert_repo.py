@@ -7,7 +7,7 @@ from MoE.prompts.prompt_repo import PromptRepo
 
 from RAG.base.cross_encoding_reranker import CrossEncodingReranker
 
-from JB007.toolbox.toolbox import ToolRepo
+from JB007.toolbox.toolbox import Toolbox
 from JB007.base.ephemeral_nlp_agent import EphemeralNLPAgent
 from JB007.base.persistent_nlp_agent import PersistentNLPAgent
 from JB007.base.persistent_tool_agent import PersistentToolAgent
@@ -75,7 +75,7 @@ class ExpertRepo:
             tool_agent = PersistentToolAgent(
                 name=ExpertRepo.WebSearchExpert.__name__,
                 llm=llm,
-                tools=[ToolRepo.Websearch.duck_duck_go_tool()],
+                tools=[Toolbox.Websearch.duck_duck_go_tool()],
                 parser=StrOutputParser(),
                 system_prompt=(
                     "You must always use the duck_duck_go_tool provided before you respond, **always!!**.\n\n"
@@ -105,13 +105,13 @@ class ExpertRepo:
                     "You are a project management guru, specialized in managing jira issues and projects.\n"
                     "Your task is to fulfill the user's request by accessing Jira information.\n"
                     "You have some tools at your disposal, use them wisely.\n"
-                    "Provide a **highly detailed** report of your actions ands results."
+                    "Provide a **highly detailed** report of your actions ands results, increasing transparency."
                     ),
                 tools=[
-                    ToolRepo.Jira.jql_query_tool,
-                    ToolRepo.Jira.create_jira_issue,
-                    ToolRepo.Jira.update_jira_issue,
-                    ToolRepo.Jira.transition_issue_state,
+                    Toolbox.Jira.jql_query_tool,
+                    Toolbox.Jira.create_jira_issue,
+                    Toolbox.Jira.update_jira_issue,
+                    Toolbox.Jira.transition_issue_state,
                     ],
                 parser=StrOutputParser(),
                 # verbose=True,
@@ -130,29 +130,28 @@ class ExpertRepo:
                 llm=llm,
                 name=ExpertRepo.QueryXtractionXpert.__name__,
                 system_prompt=(
-                    "You are an expert search query feature extractor and rewritter. "
-                    "Given a user query and its topic, extract and enhance the query "
-                    "to find related documents in an information retrieval downstream task."
+                    "You are an expert query optimizer specializing in extracting implicit search queries from complex user inputs and rewriting them for precise and efficient information retrieval. "
+                    "You thrive at engineering direct queries without adding any unnecessary information"
                     ),
                 prompt_template=(
                     "### Instructions:\n"
-                    "1. Extract the essential search terms from the query, removing noise (i.e. irrelevant information).\n"
-                    "2. If multiple implicit queries exist, create distinct search queries for each one.\n"
-                    "3. Use the topic provided for scoping the search queries.\n"
-                    "4. Each extracted search query must be single, complete, and well-defined.\n"
-                    "5. Provide your reasoning as for why you extracted the given search query.\n\n"
+                    "1. Break down compound user queries into distinct single queries, aimed to be individual inputs to an intelligent search agent.\n"
+                    "2. Extract implicit search intentions within the user query.\n"
+                    "3. Rewrite each query to make it more precise, ensuring it targets the most relevant information.\n"
+                    "4. Use the topic provided (if any) for scoping the queries.\n"
+                    "5. Provide your reasoning as for why you extracted the given query.\n\n"
                     " ### Example\n"
-                    "Topic: Algorithms in Python\n"
-                    "User: I wanna know how do you reverse a list, and examples of why you would want to do that. Be brief.\n"
+                    "Topic: Electric Vehicles\n"
+                    "User: Tell me about electric cars, especially the latest models and how they compare to hybrids in terms of fuel efficiency. Be brief\n"
                     "{{\n"
-                    "   \"search_queries\": [\"Reversing a linked list in Python\", \"Applications of reversing a linked list\"],"
-                    "   \"reason\": \"There were two implicit search queries. Also, there were extra instructions that were not relevant for the search task.\""
+                    "   \"search_queries\": [\"Give me an overview of electric cars.\", \"What are some of the latest models of electric cars?\", \"Draw a comparison between electric cars and hybrid cars on fuel efficiency.\"],\n"
+                    "   \"reason\": \"There were three implicit queries. Here is what I did to build the queries:\n    1. Identify the first implicit search:  'Give me an overview of electric cars.'\n    2. Identify the second implicit search: 'What are some of the latest models of electric cars?'\n    3. Identify the third implicit search: 'Draw a comparison between electric cars and hybrid cars on fuel efficiency.'\n"
                     "}}\n\n"
                     "### Output format:\n"
                     "Return a JSON in the following format:\n"
                     "{{\n"
-                    "   \"search_queries\": [\"<query_1>\", ...],"
-                    "   \"reason\": \"<your reasoning for decoupling the search queries>\""
+                    "   \"search_queries\": [\"<query_1>\", ...],\n"
+                    "   \"reason\": \"<your reasoning for decoupling the search queries>\"\n"
                     "}}\n\n"
                     "### Query:\n"
                     "Topic: {topic}\n"
@@ -170,7 +169,7 @@ class ExpertRepo:
             return query_augmentation_xpert
         
     class HyDExpert:
-        '''Master at generating hypothetical documents to provide better similarity search results in a Retrieval Augmented Generation (RAG) pipeline'''
+        '''Master at generating hypothetical documents to provide better similarity search results in a Retrieval Augmented Generation (RAG) and Information Retrieval (IR) pipeline'''
 
         @staticmethod
         def get_expert(llm:LLMs) -> Expert:
@@ -209,7 +208,7 @@ class ExpertRepo:
             return hyDExpert
     
     class RetrieverExpert:
-        '''Expert at retrieveing relevant documents with respect to a given query'''
+        '''Expert at retrieving semantically relevant documents with respect to a given query'''
 
         def get_expert(retriever:VectorStoreRetriever):
             retriever_expert = Expert(
@@ -221,7 +220,7 @@ class ExpertRepo:
             return retriever_expert
 
     class RerankingExpert:
-        '''A master at ranking the relevance of the retrieved documents. It usually does its work after the RetrieverExpert'''
+        '''A master at ranking the relevance of retrieved documents with respect to a given query. It usually does its work after the RetrieverExpert'''
 
         def get_expert(reranker:Union[LLMs, CrossEncodingReranker]):
             reranker_expert = Expert(
@@ -241,9 +240,12 @@ class ExpertRepo:
                 name=ExpertRepo.ContextExpert.__name__,
                 system_prompt="You are an expert at giving informed answers.",
                 prompt_template=(
-                    "Use the following pieces of retrieved context to answer the given query about {topic}. \n"
-                    "If you don't know the answer, try your best to infer one scoped to the context provided. \n"
+                    "Use the following topic and pieces of retrieved context to enhance your knowledge\n"
+                    "Answer the user query as best as possible\n"
+                    "If you don't know the answer, try your best to answer anyways. \n"
                     "Be comprehensive with your answers.\n\n"
+                    "### Topic\n"
+                    "{topic}. \n\n"
                     "### Query:\n"
                     "{input}\n\n"
                     "### Context:\n"

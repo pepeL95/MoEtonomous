@@ -13,6 +13,7 @@ class ExpertFactory:
         RerankingExpert:str = 'RerankingExpert'
         ContextExpert:str = 'ContextExpert'
 
+    @staticmethod
     def get(xpert:Directory, llm:LLMs, **kwargs):
         if xpert == ExpertFactory.Directory.Router:
             return ExpertRepo.Router.get_router(llm=llm)
