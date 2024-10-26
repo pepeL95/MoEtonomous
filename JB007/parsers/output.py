@@ -1,20 +1,25 @@
-import ast
+from JB007.toolbox.toolschemas import ToolSchemas
 
+import ast
+from typing import List
 import xml.etree.ElementTree as ET
 
-from typing import List
-
 from langchain_core.documents import Document
+from langchain_core.output_parsers import JsonOutputParser
 
 class StringParser:
-    @classmethod
-    def from_langdocs(cls, docs: List[Document]) -> str:
+    @staticmethod
+    def from_langdocs(docs: List[Document]) -> str:
         if docs and isinstance(docs[0], Document):
             return '\n\n'.join(doc.page_content for doc in docs)
         return '\n\n'.join(docs)
 
-    @classmethod
-    def to_array(cls, input_str):
+    @staticmethod
+    def from_array(docs:List[str]):
+        return '\n\n'.join(docs)
+
+    @staticmethod
+    def to_array(input_str):
         # Strip the surrounding code block markers if present
         if input_str.startswith("```"):
             code_block_start = input_str.find("['")
@@ -31,9 +36,14 @@ class StringParser:
             return []
 
 class ArxivParser:
-    class XMLParser:
-        @classmethod
-        def to_dict(cls, xml_string: str) -> dict:
+    class ApiSearchItems:
+        @staticmethod
+        def to_json():
+            return JsonOutputParser(pydantic_object=ToolSchemas.Arxiv.ApiSearchItems)
+        
+    class XML:
+        @staticmethod
+        def to_dict(xml_string: str) -> dict:
             # Parse XML string
             root = ET.fromstring(xml_string)
             # Define namespace
