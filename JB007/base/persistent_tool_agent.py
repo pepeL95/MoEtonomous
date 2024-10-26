@@ -4,7 +4,7 @@ from JB007.base.ephemeral_tool_agent import EphemeralToolAgent
 from typing import List
 
 from langchain.agents import AgentExecutor
-from langchain_core.runnables import RunnableLambda
+from langchain_core.runnables import RunnableConfig, RunnableLambda
 from langchain_core.messages.base import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.agents import create_tool_calling_agent
@@ -77,12 +77,11 @@ class PersistentToolAgent(EphemeralToolAgent):
 
 ######################################## PUBLIC METHODS #########################################################
 
-    def invoke(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
-        return super().invoke(input)
-        
+    def invoke(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage], config: RunnableConfig | None = None):
+        return super().invoke(input, config)
+
+    def stream(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage], config: RunnableConfig | None = None):
+        return super().stream(input, config)
+    
     def get_chain(self):
         return super().get_chain()
-
-    def stream(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
-        return super().stream(input)
-    

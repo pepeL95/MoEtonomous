@@ -63,6 +63,7 @@ class ExpertRepo:
                 ),
             )
             chat_expert = Expert(
+                name=ExpertRepo.GeneralKnowledgeExpert.__name__,
                 agent=chat_agent,
                 description=ExpertRepo.GeneralKnowledgeExpert.__doc__
             )
@@ -90,6 +91,7 @@ class ExpertRepo:
                 ),
             )
             realtime_expert = Expert(
+                name=ExpertRepo.WebSearchExpert.__name__,
                 agent=tool_agent, 
                 description=ExpertRepo.WebSearchExpert.__doc__
             )
@@ -119,6 +121,7 @@ class ExpertRepo:
                 # verbose=True,
             )
             realtime_expert = Expert(
+                name=ExpertRepo.JiraExpert.__name__,
                 agent=jira_expert, 
                 description=ExpertRepo.JiraExpert.__doc__
             )
@@ -164,6 +167,7 @@ class ExpertRepo:
             )
 
             query_augmentation_xpert = Expert(
+                name=ExpertRepo.QueryXtractionXpert.__name__,
                 agent=quary_augmentation_agent,
                 description=ExpertRepo.QueryXtractionXpert.__doc__
             )
@@ -203,6 +207,7 @@ class ExpertRepo:
             )
             
             hyDExpert = Expert(
+                name=ExpertRepo.HyDExpert.__name__,
                 agent=hyDEAgent, 
                 description=ExpertRepo.HyDExpert.__doc__
             )
@@ -257,6 +262,7 @@ class ExpertRepo:
             )
             
             context_expert = Expert(
+                name=ExpertRepo.ContextExpert.__name__,
                 agent=context_agent,
                 description=ExpertRepo.ContextExpert.__doc__
             )

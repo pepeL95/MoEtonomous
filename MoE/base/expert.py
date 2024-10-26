@@ -1,9 +1,8 @@
-from JB007.base.agent import Agent
-from typing import Any
+from langchain_core.runnables import Runnable
 
 class Expert:
-    def __init__(self, agent:Agent | Any, description:str, name: str=None) -> None:
-        self.name = name or agent.name
+    def __init__(self, agent:Runnable, description:str, name:str) -> None:
+        self.name = name
         self.description = description
         self.agent = agent
 
