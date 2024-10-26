@@ -12,6 +12,9 @@ class ExpertFactory:
         RetrieverExpert:str = 'RetrieverExpert'
         RerankingExpert:str = 'RerankingExpert'
         ContextExpert:str = 'ContextExpert'
+        ArxivQbuilderXpert:str = 'ArxivQbuilderXpert'
+        ArxivSearchXpert:str = 'ArxivSearchXpert'
+        ArxivSigmaXpert:str = 'ArxivSigmaXpert'
 
     @staticmethod
     def get(xpert:Directory, llm:LLMs, **kwargs):
@@ -33,4 +36,10 @@ class ExpertFactory:
             return ExpertRepo.RerankingExpert.get_expert(reranker=kwargs['reranker'])
         if xpert == ExpertFactory.Directory.ContextExpert:
             return ExpertRepo.ContextExpert.get_expert(llm=llm)
+        if xpert == ExpertFactory.Directory.ArxivQbuilderXpert:
+            return ExpertRepo.Arxiv.QbuilderXpert.get_expert(llm=llm)
+        if xpert == ExpertFactory.Directory.ArxivSearchXpert:
+            return ExpertRepo.Arxiv.SearchXpert.get_expert(llm=llm)
+        if xpert == ExpertFactory.Directory.ArxivSigmaXpert:
+            return ExpertRepo.Arxiv.SigmaXpert.get_expert(llm=llm)
 

@@ -4,7 +4,7 @@ from MoE.base.router import Router
 from MoE.config.debug import Debug
 from MoE.base.mixture import MoE
 
-from JB007.parsers.generic import StringParser
+from JB007.parsers.output import StringParser
 
 from typing import List
 

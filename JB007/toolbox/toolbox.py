@@ -1,6 +1,6 @@
 from dev_tools.utils.clifont import print_bold, CLIFont
 
-from JB007.parsers.generic import ArxivGenParser
+from JB007.parsers.output import ArxivParser
 from JB007.toolbox.toolschemas import ToolSchemas
 
 from langchain_core.tools import tool
@@ -185,7 +185,7 @@ class Toolbox:
     ############################################################# Arxiv #########################################################################
     
     class Arxiv:
-        @tool(args_schema=ToolSchemas.Arxiv.ApiQuery)
+        @tool(args_schema=ToolSchemas.Arxiv.ApiSearchItems)
         def build_query(query: str, cat: str, N: int) -> str:
             '''Use this tool when a query json object is given. An example of a query object is: {"query": "space physics", "cat": "physics.space-ph", "N": 10}'''
             
@@ -209,7 +209,7 @@ class Toolbox:
                 xml_data = response.read().decode('utf-8')
                 
                 # Parse XML data to dictionary
-                articles = ArxivGenParser.XML.to_dict(xml_data)
+                articles = ArxivParser.XML.to_dict(xml_data)
                 return articles
 
             except URLError as e:
