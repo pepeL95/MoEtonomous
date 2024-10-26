@@ -84,7 +84,7 @@ class EphemeralNLPAgent(Agent):
         # Create chain
         self._agent = prompt | self.llm | self._parser
 
-    def _invoke_with_prompt_template(self, input: Union[str, dict, List[dict]], stream=False):
+    def _invoke_with_prompt_template(self, input: Union[str, dict, List[dict]], config: RunnableConfig | None = None, stream:bool=False):
         '''
         Invoke agent when a prompt template is defined.
         input should match the prompt template definition accordingly.
@@ -92,8 +92,8 @@ class EphemeralNLPAgent(Agent):
         # Input as a dict
         if isinstance(input, dict) or isinstance(input, str):
             if stream:
-                return self._agent.stream(input)
-            return self._agent.invoke(input)
+                return self._agent.stream(input, config)
+            return self._agent.invoke(input, config)
         
         # Input as a List[dict]
         if isinstance(input, list) and all(isinstance(element, dict) for element in input):
@@ -108,13 +108,13 @@ class EphemeralNLPAgent(Agent):
             
             # To stream, or not to stream, that is the question
             if stream:
-                return anonymous_chain.stream({})
-            return anonymous_chain.invoke({})
+                return anonymous_chain.stream({}, config)
+            return anonymous_chain.invoke({}, config)
 
         # Invalid input format     
         raise ValueError(f"Incorrect type fed to prompt_template: Should be one of Union[str, dict, List[dict]], but was given {type(input)}")
 
-    def _invoke_without_prompt_template(self, input: Union[str, dict, List[dict], BaseMessage, List[BaseMessage]], stream=False):
+    def _invoke_without_prompt_template(self, input: Union[str, dict, List[dict], BaseMessage, List[BaseMessage]], config: RunnableConfig | None = None, stream=False):
         messages = {"input": []}
         
         # Input as a str
@@ -148,8 +148,8 @@ class EphemeralNLPAgent(Agent):
         
         # To stream, or not to stream, that is the question
         if stream:
-            return self._agent.stream(messages)
-        return self._agent.invoke(messages)
+            return self._agent.stream(messages, config)
+        return self._agent.invoke(messages, config)
 
 ############################################# CLASS PRIVATE METHODS ####################################################
 

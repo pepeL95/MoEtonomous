@@ -42,7 +42,7 @@ class PersistentToolAgent(EphemeralToolAgent):
             self._agent = create_tool_calling_agent(self._llm, self._tools, prompt)
 
 
-    def _invoke_with_prompt_template(self, input, stream):
+    def _invoke_with_prompt_template(self, input, config: RunnableConfig | None = None, stream:bool=False):
         if any([isinstance(input, str), isinstance(input, dict)]):
             input_object = input
         
@@ -65,14 +65,14 @@ class PersistentToolAgent(EphemeralToolAgent):
         
         # To stream, or not to stream, that is the question
         if stream:
-            ret = self._agent.stream(input_object)
+            ret = self._agent.stream(input_object, config)
             return ret
-        ret = self._agent.invoke(input_object)
+        ret = self._agent.invoke(input_object, config)
         return ret
     
 
-    def _invoke_without_prompt_template(self, input, stream):
-        return self._invoke_with_prompt_template(input, stream)
+    def _invoke_without_prompt_template(self, input, config: RunnableConfig | None = None, stream:bool=False):
+        return self._invoke_with_prompt_template(input, config, stream)
 
 
 ######################################## PUBLIC METHODS #########################################################

@@ -116,7 +116,7 @@ class PersistentNLPAgent(EphemeralNLPAgent):
 
         self._agent = prompt | self.llm | self._parser
 
-    def _invoke_with_prompt_template(self, input: str | dict | List[dict], stream=False):
+    def _invoke_with_prompt_template(self, input: str | dict | List[dict], config: RunnableConfig | None = None, stream:bool=False):
         # Input as a dict
         if isinstance(input, dict):
             # Sanity check: chat_template should be a List[BaseMessages]
@@ -125,8 +125,8 @@ class PersistentNLPAgent(EphemeralNLPAgent):
             
             # To stream, or not to stream, that is the question
             if stream:
-                return self._agent.stream(input)
-            return self._agent.invoke(input)
+                return self._agent.stream(input, config)
+            return self._agent.invoke(input, config)
             
 
         # Input as a List[dict]
@@ -142,14 +142,14 @@ class PersistentNLPAgent(EphemeralNLPAgent):
 
             # To stream, or not to stream, that is the question
             if stream:
-                return anonymous_chain.stream({})
-            return anonymous_chain.invoke({})
+                return anonymous_chain.stream({}, config)
+            return anonymous_chain.invoke({}, config)
 
         # Invalid format for input provided
         else:
             raise ValueError(f"input should be one of Union[dict, List[dict]]. Got {type(input)}")
     
-    def _invoke_without_prompt_template(self, input: List[BaseMessage] | List[dict] | dict | str, stream=False):
+    def _invoke_without_prompt_template(self, input: List[BaseMessage] | List[dict] | dict | str, config: RunnableConfig | None = None, stream:bool=False):
         input_object = {"input": [], "chat_history": []}
         # Input as a str (i.e. no chat history)
         if isinstance(input, str):
@@ -202,8 +202,8 @@ class PersistentNLPAgent(EphemeralNLPAgent):
         
         # To stream, or not to stream, that is the question
         if stream:
-            return self._agent.stream(input_object)
-        return self._agent.invoke(input_object)
+            return self._agent.stream(input_object, config)
+        return self._agent.invoke(input_object, config)
 
 ############################################# PUBLIC METHODS ####################################################
     

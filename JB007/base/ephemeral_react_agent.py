@@ -50,7 +50,7 @@ class EphemeralReactAgent(Agent):
             self._agent = create_react_agent(self._llm, self._tools, prompt)
             return
 
-    def _invoke_with_prompt_template(self, input, stream):
+    def _invoke_with_prompt_template(self, input, config=None, stream=False):
         agent_executor = AgentExecutor(agent=self._agent, tools=self._tools, verbose=self._verbose, handle_parsing_errors=True)
         if self._parser is not None:
             agent_executor = (
@@ -59,12 +59,12 @@ class EphemeralReactAgent(Agent):
             )
 
         if stream:
-            return agent_executor.stream(input)
-        return agent_executor.invoke(input)
+            return agent_executor.stream(input, config)
+        return agent_executor.invoke(input, config)
     
-    def _invoke_without_prompt_template(self, input, stream):
+    def _invoke_without_prompt_template(self, input, config=None, stream=False):
         # There is always a prompt template, by design
-        return self._invoke_with_prompt_template(input, stream)
+        return self._invoke_with_prompt_template(input, config, stream)
 
 ############################################# PUBLIC METHODS ####################################################
 

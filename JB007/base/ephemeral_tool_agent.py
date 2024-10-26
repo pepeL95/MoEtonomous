@@ -68,7 +68,7 @@ class EphemeralToolAgent(Agent):
             self._agent = create_tool_calling_agent(self._llm, self._tools, prompt)
 
 
-    def _invoke_with_prompt_template(self, input, stream):
+    def _invoke_with_prompt_template(self, input, config: RunnableConfig | None = None, stream:bool=False):
         if not any([isinstance(input, str), isinstance(input, dict)]):
             raise ValueError(f'Input must be one of Union[str, dict]. Got {type(input)}')
         
@@ -83,12 +83,12 @@ class EphemeralToolAgent(Agent):
             )
         
         if stream:
-            return agent_executor.stream(input)
-        return agent_executor.invoke(input)
+            return agent_executor.stream(input, config)
+        return agent_executor.invoke(input, config)
     
-    def _invoke_without_prompt_template(self, input, stream):
+    def _invoke_without_prompt_template(self, input, config: RunnableConfig | None = None, stream:bool=False):
         '''Always a prompt template, by design'''
-        return self._invoke_with_prompt_template(input, stream)
+        return self._invoke_with_prompt_template(input, config, stream)
 
     ######################################## CLASS METHODS #########################################################
 
