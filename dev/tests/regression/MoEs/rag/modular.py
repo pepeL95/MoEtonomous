@@ -18,7 +18,6 @@ from dev.tests.regression.MoEs.rag.pre import PreRetrievalMoE
 
 from dev_tools.utils.clifont import print_cli_message
 from dev_tools.enums.embeddings import Embeddings
-from dev_tools.enums.llms import LLMs
 
 from langchain_chroma import Chroma
 from langchain_core.runnables import RunnableLambda

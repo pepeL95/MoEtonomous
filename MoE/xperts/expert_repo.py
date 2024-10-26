@@ -11,7 +11,6 @@ from JB007.toolbox.toolbox import Toolbox
 from JB007.base.ephemeral_nlp_agent import EphemeralNLPAgent
 from JB007.base.persistent_nlp_agent import PersistentNLPAgent
 from JB007.base.persistent_tool_agent import PersistentToolAgent
-from JB007.parsers.pydantic import Schema
 
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.vectorstores import VectorStoreRetriever
@@ -158,7 +157,7 @@ class ExpertRepo:
                     "User: {input}\n"
                     "You: "
                 ),
-                parser=JsonOutputParser(pydantic_object=Schema.EnhancedQueries)
+                parser=JsonOutputParser()
             )
 
             query_augmentation_xpert = Expert(

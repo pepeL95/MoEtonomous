@@ -41,12 +41,12 @@ class EphemeralToolAgent(Agent):
         
         # Build prompt
         human_template = ("human", "{input}")
-        if self._system_prompt is None:
+        if self._prompt_template is not None:
             human_template = ('human', self._prompt_template)
         
-        elif self._prompt_template is not None and self._system_prompt is None:
+        if self._system_prompt is None:
             prompt = ChatPromptTemplate.from_messages([
-                self._prompt_template,
+                human_template,
                 ("placeholder", "{agent_scratchpad}"),
                 ])
             

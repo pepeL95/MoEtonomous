@@ -1,5 +1,10 @@
-from langchain_core.pydantic_v1 import BaseModel, Field
+from JB007.toolbox.toolschemas import ToolSchemas
 
-class Schema:
-    class EnhancedQueries(BaseModel):
-        search_query: str = Field(description="The enhanced search query")
+from langchain_core.output_parsers import JsonOutputParser
+
+class ArxivPyParser:
+    @staticmethod
+    def apiQueryJson():
+        return JsonOutputParser(pydantic_object=ToolSchemas.Arxiv.ApiQuery)
+    
+            

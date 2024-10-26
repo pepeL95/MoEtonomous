@@ -25,3 +25,9 @@ class ToolSchemas:
         
         class JQL(BaseModel):
             jql_query_str: str = Field(description="This is the rquired JQL query string for querying jira issues.")
+
+    class Arxiv:
+        class ApiQuery(BaseModel):
+            query: str = Field(description="this is the input search query", default="")
+            cat: str = Field(description="this is the category taxonomy (convert it to the compatible category taxonomy for the arxiv api)", default="cs.CL")
+            N: int = Field(description="this is the number of articles requested", default=10)

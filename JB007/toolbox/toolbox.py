@@ -1,15 +1,22 @@
-import os
-from jira import JIRA, JIRAError
-from requests.exceptions import HTTPError
-
 from dev_tools.utils.clifont import print_bold, CLIFont
+
+from JB007.parsers.generic import ArxivGenParser
 from JB007.toolbox.toolschemas import ToolSchemas
 
 from langchain_core.tools import tool
+from langchain_community.utilities.jira import JiraAPIWrapper
 from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 from langchain_community.agent_toolkits.jira.toolkit import JiraToolkit
-from langchain_community.utilities.jira import JiraAPIWrapper
+
+import os
+from typing import List
+from urllib.parse import quote
+from jira import JIRA, JIRAError
+from urllib.error import URLError
+import xml.etree.ElementTree as ET
+from urllib.request import urlopen
+from requests.exceptions import HTTPError
 
 class Toolbox:
 
@@ -178,4 +185,35 @@ class Toolbox:
     ############################################################# Arxiv #########################################################################
     
     class Arxiv:
-        pass    
+        @tool(args_schema=ToolSchemas.Arxiv.ApiQuery)
+        def build_query(query: str, cat: str, N: int) -> str:
+            '''Use this tool when a query json object is given. An example of a query object is: {"query": "space physics", "cat": "physics.space-ph", "N": 10}'''
+            
+            # Clean out query
+            query = quote(query).strip()
+            cat = cat.strip()
+            
+            # Build the api url
+            if not query or "recent" in query:
+                return f"https://export.arxiv.org/api/query?search_query={cat}&sortBy=submittedDate&sortOrder=descending&max_results={N}"
+            
+            return f"https://export.arxiv.org/api/query?search_query=cat:{cat}+AND+ti:{query}&sortBy=submittedDate&sortOrder=descending&max_results={N}"
+
+        @tool(return_direct=True)
+        def execute_query(url:str) -> List[dict]:
+            '''This tool executes a valid query for fetching papers in the Arxiv api system. An example of the ```url``` input is: "https://export.arxiv.org/api/query?search_query=cat:cs.CL+AND+ti:graph%20rag&sortBy=submittedDate&sortOrder=descending&max_results=10"'''
+            
+            try:
+                # Fetch data from the URL
+                response = urlopen(url)
+                xml_data = response.read().decode('utf-8')
+                
+                # Parse XML data to dictionary
+                articles = ArxivGenParser.XML.to_dict(xml_data)
+                return articles
+
+            except URLError as e:
+                raise ConnectionError(f"Failed to fetch data from URL: {e.reason}")
+
+            except ET.ParseError as e:
+                raise ValueError(f"Failed to parse XML data: {str(e)}")

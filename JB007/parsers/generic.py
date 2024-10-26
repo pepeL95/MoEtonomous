@@ -14,6 +14,10 @@ class StringParser:
         return '\n\n'.join(docs)
 
     @classmethod
+    def from_array(cls, docs:List[str]):
+        return '\n\n'.join(doc for doc in docs)
+
+    @classmethod
     def to_array(cls, input_str):
         # Strip the surrounding code block markers if present
         if input_str.startswith("```"):
@@ -30,8 +34,8 @@ class StringParser:
         except (SyntaxError, ValueError):
             return []
 
-class ArxivParser:
-    class XMLParser:
+class ArxivGenParser:
+    class XML:
         @classmethod
         def to_dict(cls, xml_string: str) -> dict:
             # Parse XML string
