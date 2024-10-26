@@ -4,7 +4,7 @@ from typing import Union, List
 
 from langchain_community.llms import BaseLLM
 from langchain_core.messages.base import BaseMessage
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnableConfig, RunnablePassthrough
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate, PromptTemplate
@@ -226,9 +226,9 @@ class EphemeralNLPAgent(Agent):
     def get_chain(self):
         return super().get_chain()
     
-    def invoke(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
-        return super().invoke(input)
+    def invoke(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage], config: RunnableConfig | None = None):
+        return super().invoke(input, config)
     
-    def stream(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
-        return super().stream(input)
+    def stream(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage], config: RunnableConfig | None = None):
+        return super().stream(input, config)
         

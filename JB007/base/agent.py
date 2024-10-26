@@ -1,9 +1,10 @@
 from abc import abstractmethod
-from typing import List
+from typing import List, Optional
 
 from langchain_core.messages import BaseMessage
+from langchain_core.runnables import Runnable, RunnableConfig
 
-class Agent:
+class Agent(Runnable):
     """Abstract class that offers a basic interface for specific agents"""
     def __init__(self, name, llm=None, system_prompt=None, prompt_template=None, parser=None):
         self._name = name
@@ -76,12 +77,12 @@ class Agent:
     def get_chain(self):
         return self._agent
     
-    def invoke(self, input:str | dict | List[dict] | BaseMessage | List[BaseMessage]):
+    def invoke(self, input:str | dict | List[dict] | BaseMessage | List[BaseMessage] , config: Optional[RunnableConfig] = None):
         if not self._prompt_template:
             return self._invoke_without_prompt_template(input, stream=False)
         return self._invoke_with_prompt_template(input, stream=False)
     
-    def stream(self, input:str | dict | List[dict] | BaseMessage | List[BaseMessage]):
+    def stream(self, input:str | dict | List[dict] | BaseMessage | List[BaseMessage], config: Optional[RunnableConfig] = None):
         if not self._prompt_template:
             return self._invoke_without_prompt_template(input=input, stream=True)
         return self._invoke_with_prompt_template(input=input, stream=True)

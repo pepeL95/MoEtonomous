@@ -5,7 +5,7 @@ from typing import List
 from langchain import hub
 from langchain_core.tools import BaseTool
 from langchain_community.llms import BaseLLM
-from langchain_core.runnables import RunnableLambda
+from langchain_core.runnables import RunnableConfig, RunnableLambda
 from langchain_core.output_parsers import BaseOutputParser
 from langchain.agents import create_react_agent, AgentExecutor
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
@@ -71,8 +71,8 @@ class EphemeralReactAgent(Agent):
     def get_chain(self):
         return super().get_chain()
     
-    def invoke(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
-        return super().invoke(input)
+    def invoke(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage], config: RunnableConfig | None = None):
+        return super().invoke(input, config)
     
-    def stream(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage]):
-        return super().stream(input)
+    def stream(self, input: str | dict | List[dict] | BaseMessage | List[BaseMessage], config: RunnableConfig | None = None):
+        return super().stream(input, config)
