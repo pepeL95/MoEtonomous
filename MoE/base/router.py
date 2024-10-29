@@ -1,5 +1,7 @@
 from JB007.base.agent import Agent
-from langchain_core.runnables import RunnableLambda
+
+from typing import Optional
+from langchain_core.runnables import RunnableLambda, RunnableConfig
 
 class Router:
     '''ReAct routing expert'''
@@ -11,6 +13,5 @@ class Router:
             stop = ['\nExpert Response:']
             self.agent.llm = self.agent.llm.bind(stop=stop)
 
-    def invoke(self, input):
-        return self.agent.invoke(input)
-    
+    def invoke(self, input, config:Optional[RunnableConfig]=None):
+        return self.agent.invoke(input=input, config=config)

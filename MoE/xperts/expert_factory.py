@@ -27,15 +27,15 @@ class ExpertFactory:
         if xpert == ExpertFactory.Directory.JiraExpert:
             return ExpertRepo.JiraExpert.get_expert(llm=llm)
         if xpert == ExpertFactory.Directory.QueryXtractionXpert:
-            return ExpertRepo.QueryXtractionXpert.get_expert(llm=llm)
+            return ExpertRepo.RAG.PreRetrieval.QueryXtractionXpert.get_expert(llm=llm)
         if xpert == ExpertFactory.Directory.HyDExpert:
-            return ExpertRepo.HyDExpert.get_expert(llm=llm)
+            return ExpertRepo.RAG.PreRetrieval.HyDExpert.get_expert(llm=llm)
         if xpert == ExpertFactory.Directory.RetrieverExpert:
-            return ExpertRepo.RetrieverExpert.get_expert(retriever=kwargs['retriever'])
+            return ExpertRepo.RAG.Retrieval.RetrieverExpert.get_expert(retriever=kwargs['retriever'])
         if xpert == ExpertFactory.Directory.RerankingExpert:
-            return ExpertRepo.RerankingExpert.get_expert(reranker=kwargs['reranker'])
+            return ExpertRepo.RAG.PostRetrieval.RerankingExpert.get_expert(reranker=kwargs['reranker'])
         if xpert == ExpertFactory.Directory.ContextExpert:
-            return ExpertRepo.ContextExpert.get_expert(llm=llm)
+            return ExpertRepo.RAG.PostRetrieval.ContextExpert.get_expert(llm=llm)
         if xpert == ExpertFactory.Directory.ArxivQbuilderXpert:
             return ExpertRepo.Arxiv.QbuilderXpert.get_expert(llm=llm)
         if xpert == ExpertFactory.Directory.ArxivSearchXpert:
