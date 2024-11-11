@@ -38,8 +38,8 @@ class ModularRagMoE:
             xpert=ExpertFactory.Directory.RetrieverExpert, 
             llm=None, 
             retriever=Chroma(
-                    collection_name='toy-embeddings', 
-                    persist_directory=os.getenv('VDB_PATH'), 
+                    collection_name='toy-embeddings',
+                    persist_directory=os.getenv('VDB_PATH'),
                     embedding_function=Embeddings.sentence_transformers_mpnet(),
             ).as_retriever(search_kwargs={'k': 10})
         )

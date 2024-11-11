@@ -7,6 +7,7 @@ if not os.environ.get('ENV'):
     load_dotenv(os.environ["RND_ENV_CONFIG_PATH"]) # .env file path
     sys.path.append(os.environ.get('SRC'))
 
+from MoE.config.debug import Debug
 from dev_tools.utils.clifont import input_bold, print_cli_message
 
 from MoE.mixtures.genChatMoE.genChatMoE import GenChatMoE
@@ -28,7 +29,8 @@ class GenChatMoERunner:
             name='GenChatOrchestrator',
             description=None,
             router=router,
-            experts=[gen_xpert, web_xpert]
+            experts=[gen_xpert, web_xpert],
+            verbose=Debug.Verbosity.low,
         ).build_MoE()
 
         return gen_chat_MoE
@@ -51,4 +53,4 @@ if __name__ == '__main__':
         memory.add_message(HumanMessage(content=user_input, role='user'))
         memory.add_message(AIMessage(content=state['expert_output'], role='assistant'))
 
-        print_cli_message('**assistant: **' + state['expert_output'], '\n')
+        print_cli_message('**assistant: **' + state['expert_output'])
