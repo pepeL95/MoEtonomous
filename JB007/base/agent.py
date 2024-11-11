@@ -79,7 +79,7 @@ class Agent(Runnable):
     
     def invoke(self, input:str | dict | List[dict] | BaseMessage | List[BaseMessage] , config: Optional[RunnableConfig] = None):
         if not self._prompt_template:
-            return self._invoke_without_prompt_template(input, stream=False)
+            return self._invoke_without_prompt_template(input, config, stream=False)
         return self._invoke_with_prompt_template(input, config, stream=False)
     
     def stream(self, input:str | dict | List[dict] | BaseMessage | List[BaseMessage], config: Optional[RunnableConfig] = None):

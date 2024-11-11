@@ -15,6 +15,7 @@ class ExpertFactory:
         ArxivQbuilderXpert:str = 'ArxivQbuilderXpert'
         ArxivSearchXpert:str = 'ArxivSearchXpert'
         ArxivSigmaXpert:str = 'ArxivSigmaXpert'
+        ListPalExpert:str = 'ListPalExpert'
 
     @staticmethod
     def get(xpert:Directory, llm:LLMs, **kwargs):

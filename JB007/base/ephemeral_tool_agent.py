@@ -72,15 +72,14 @@ class EphemeralToolAgent(Agent):
         if not any([isinstance(input, str), isinstance(input, dict)]):
             raise ValueError(f'Input must be one of Union[str, dict]. Got {type(input)}')
         
-        agent_executor = AgentExecutor(agent=self._agent, tools=self._tools, verbose=self._verbose, handle_parsing_errors=True)
         if self._parser is None:
             self.parser = RunnablePassthrough()
         
         agent_executor = (
-                agent_executor
-                | RunnableLambda(lambda response: response["output"]) 
-                | self._parser
-            )
+            AgentExecutor(agent=self._agent, tools=self._tools, verbose=self._verbose, handle_parsing_errors=True)
+            | RunnableLambda(lambda response: response["output"]) 
+            | self._parser
+        )
         
         if stream:
             return agent_executor.stream(input, config)

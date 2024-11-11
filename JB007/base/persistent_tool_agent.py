@@ -21,10 +21,11 @@ class PersistentToolAgent(EphemeralToolAgent):
         if self._prompt_template is None and self._system_prompt is None:
             raise ValueError("Must have at least one of Union[system_prompt, prompt_template].")
         
+        human_template = ("human", self._prompt_template) if self.prompt_template else ("human", "{input}")
         if self._system_prompt is None:
             prompt = ChatPromptTemplate.from_messages([
                 ("placeholder", "{chat_history}"),
-                ("human", self._prompt_template or "{input}"),
+                human_template,
                 ("placeholder", "{agent_scratchpad}"),
                 ])
         
@@ -32,7 +33,7 @@ class PersistentToolAgent(EphemeralToolAgent):
             prompt = ChatPromptTemplate.from_messages([
                     ("system", self._system_prompt),
                     ("placeholder", "{chat_history}"),
-                    ("human", self._prompt_template or "{input}"),
+                    human_template,
                     ("placeholder", "{agent_scratchpad}"),
                     ])
             
@@ -52,22 +53,21 @@ class PersistentToolAgent(EphemeralToolAgent):
         else:
             raise ValueError(f'Input must be one of Union[str, dict, List[BaseMessage]]. Got {type(input)}')
 
-        agent_executor = AgentExecutor(agent=self._agent, tools=self._tools, verbose=self._verbose, handle_parsing_errors=True)
-        
         # To parse, or not to parse, that is the question
         if self.parser is None:
             self.parser = RunnablePassthrough()
 
         agent_executor = (
-            agent_executor
-            | RunnableLambda(lambda response: response["output"]) | self._parser
+            AgentExecutor(agent=self._agent, tools=self._tools, verbose=self._verbose, handle_parsing_errors=True)
+            | RunnableLambda(lambda response: response["output"]) 
+            | self._parser
         )
         
         # To stream, or not to stream, that is the question
         if stream:
-            ret = self._agent.stream(input_object, config)
+            ret = agent_executor.stream(input_object, config)
             return ret
-        ret = self._agent.invoke(input_object, config)
+        ret = agent_executor.invoke(input_object, config)
         return ret
     
 
