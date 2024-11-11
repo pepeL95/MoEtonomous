@@ -27,14 +27,14 @@ class ModularRagMoE:
     def get():  
         # Init experts
         router = Router(
-            name='RAGOrchestrator',
+            name='RAGchestrator',
             description=None,
             agent=RunnableLambda(lambda state: (
                 f'\nAction: PretrievalMoE\n'
                 f'Action Input: {state['input']}\n'
             ))
         )
-        retriever_xpert = ExpertFactory.get(
+        retrievalXpert = ExpertFactory.get(
             xpert=ExpertFactory.Directory.RetrieverExpert, 
             llm=None, 
             retriever=Chroma(
@@ -50,7 +50,7 @@ class ModularRagMoE:
         MoE = ModularRAGMoE(
             name='ModularRAGMoE',
             description=None,
-            experts=[pretrievalMoE, retriever_xpert, postrievalMoE],
+            experts=[pretrievalMoE, retrievalXpert, postrievalMoE],
             router=router,
             verbose=Debug.Verbosity.low,
         ).build_MoE()
