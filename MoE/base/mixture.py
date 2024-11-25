@@ -55,8 +55,8 @@ class MoE:
 
     @classmethod
     def _parse_action_and_input(cls, text):
-        first_split = text.split('\nAction: ')[-1]
-        second_split = first_split.split('\nAction Input: ')
+        first_split = text.split('\nAction:')[-1]
+        second_split = first_split.split('\nAction Input:')
         if len(second_split) == 2:
             return second_split[0].strip(), second_split[1].strip()
         else:

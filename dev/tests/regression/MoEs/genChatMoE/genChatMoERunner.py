@@ -47,8 +47,9 @@ if __name__ == '__main__':
     while (user_input := input_bold('user: ')) != 'exit':
         state = chat.invoke({
             'input': user_input,
-            'ephemeral_mem': memory
-            
+            'ephemeral_mem': memory,
+            # 'expert_input': user_input,
+            # 'next': ExpertFactory.Directory.GeneralKnowledgeExpert
         })
         memory.add_message(HumanMessage(content=user_input, role='user'))
         memory.add_message(AIMessage(content=state['expert_output'], role='assistant'))
