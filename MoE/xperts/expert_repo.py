@@ -79,13 +79,11 @@ class ExpertRepo:
                 tools=[Toolbox.Websearch.duck_duck_go_tool()],
                 parser=StrOutputParser(),
                 system_prompt=(
-                    "You must always use the duck_duck_go_tool provided before you respond, **always!!**.\n\n"
-                    "You are an online search and information gatherer expert.\n"
+                    "You are an web search expert who gathers information based in a given query. Use the duck_duck_go_tool provided for searching the web.\n"
                     "You are part of a conversation with other experts who, together, collaborate to fulfill a request.\n"
                     "Your input is given from another expert who needs you to answer it.\n"
                     "You are chosen for a reason! Do not ask for clarifications.\n"
-                    "Provide a **highly detailed** summary of the results you obtain, including sources.\n"
-                    "Format your response nicely, using markdown."
+                    "Before respinding, build a **highly detailed** summary of the results you obtained, including sources.\n"
                 ),
             )
             realtime_expert = Expert(
@@ -104,11 +102,11 @@ class ExpertRepo:
                 llm=llm,
                 name=ExpertRepo.JiraExpert.__name__,
                 system_prompt=(
-                    "You are a project management guru, specialized in managing jira issues and projects.\n"
+                    "You are a project management expert, specialized in managing Jira issues and projects.\n"
                     "Your task is to fulfill the user's request by accessing Jira information.\n"
                     "You have some tools at your disposal, use them wisely.\n"
-                    "Provide a **highly detailed** report of your actions ands results, increasing transparency."
-                    ),
+                    "To promote transparency, provide a **highly detailed** report of your actions ands results."
+                ),
                 tools=[
                     Toolbox.Jira.jql_query_tool,
                     Toolbox.Jira.create_jira_issue,
@@ -138,7 +136,7 @@ class ExpertRepo:
                         llm=llm,
                         name=ExpertRepo.RAG.PreRetrieval.QueryXtractionXpert.__name__,
                         system_prompt=(
-                            "You are an expert query optimizer specializing in extracting implicit search queries from complex user inputs and rewriting them for precise and efficient information retrieval. "
+                            "You are an expert at optimizing queries, extracting implicit search structures from complex user aiming for efficient information retrieval. "
                             "You thrive at engineering direct queries without adding any unnecessary information"
                             ),
                         prompt_template=(
@@ -320,11 +318,11 @@ class ExpertRepo:
                 return search_xpert
 
         class SigmaXpert:
-            '''An NLP Guru. It specializes in summarization and feature extraction tasks. Useful expert when we need to synthesize information and provide insights from obtained results.'''
+            '''An NLP Guru specialized in summarization tasks. Useful expert when we need to synthesize information and provide insights from obtained results.'''
             def get_expert(llm:LLMs):
                 sigma_agent = EphemeralNLPAgent(
                     name='ArxivSigmaAgent',
-                    system_prompt='You are an nlp expert, specialized in feature extraction and summarization.',
+                    system_prompt='You are an nlp expert, specialized in summarization.',
                     prompt_template=Prompters.Arxiv.AbstractSigma(),
                     llm=LLMs.GEMINI(),
                 )

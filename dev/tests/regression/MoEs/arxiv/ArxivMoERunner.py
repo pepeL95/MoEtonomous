@@ -7,7 +7,6 @@ if not os.environ.get('ENV'):
     load_dotenv(os.environ["RND_ENV_CONFIG_PATH"]) # .env file path
     sys.path.append(os.environ.get('SRC'))
 
-
 from MoE.config.debug import Debug
 from MoE.mixtures.arxiv.arxivMoE import ArxivMoE
 from MoE.xperts.expert_factory import ExpertFactory
