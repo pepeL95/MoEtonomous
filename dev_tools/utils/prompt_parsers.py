@@ -43,7 +43,7 @@ class PromptParsers:
             ret = _sys + _usr
             return ret
 
-    class LLama3:
+    class LLama32:
         def parseSys(mssg):
             ret = (
                 f"<|start_header_id|>system<|end_header_id|>\n"

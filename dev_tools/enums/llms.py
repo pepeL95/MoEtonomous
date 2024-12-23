@@ -67,9 +67,9 @@ class LLMs:
         return gemini
     
     @staticmethod
-    def LLAMA_3dot2():
+    def LLAMA_32():
         llama_3dot2 = LlamaCpp(
-            model_path=os.environ.get('MODEL_PATH_LLAMA_3dot2_IT_Q4_GGUF'),
+            model_path=os.environ.get('MODEL_PATH_LLAMA_32_IT_Q4_GGUF'),
             n_gpu_layers=-1,
             n_batch=1024,
             n_ctx=8192,
