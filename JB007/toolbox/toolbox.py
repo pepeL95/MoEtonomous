@@ -27,6 +27,12 @@ class Toolbox:
         def duck_duck_go_tool():
             ddg_search_tool = DuckDuckGoSearchResults(api_wrapper=DuckDuckGoSearchAPIWrapper(max_results=15))
             ddg_search_tool.name = 'duck_duck_go_tool'
+            ddg_search_tool.description = (
+                "A wrapper around Duck Duck Go Search. "
+                "Useful for when you need to answer questions about current events. "
+                "Input to the tool must be a search query, tailor the input query accordingly. "
+                "Output is a JSON string array of the query results"
+            )
             return ddg_search_tool
     
     ################################################################ Jira ###########################################################################

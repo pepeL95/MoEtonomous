@@ -23,11 +23,12 @@ class PromptRepo:
 
 ** You MUST use the following format:**
 
-Thought: think and plan what to do next in order to work towards achieving the goal.
-Action: the action to take, must be one of {expert_names}..
+Thought: generate an insightful thought about the current state.
+Plan: break down thought into steps and determine what to do next in order to work towards achieving the goal.
+Action: the action to take, must be exactly one of {expert_names}..
 Action Input: the input to selected expert.
 Expert Response: the response from the expert, consider using it before continuing.
-... (this Thought/Action/Action Input/Expert Response can repeat N times, only if necessary)
+... (this Thought/Plan/Action/Action Input/Expert Response may repeat N times)
 Thought: I now know the final answer.
 Final Answer: the final answer to the original user query.
 

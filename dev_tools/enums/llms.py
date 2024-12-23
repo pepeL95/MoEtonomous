@@ -65,3 +65,17 @@ class LLMs:
     def GEMINI():
         gemini = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
         return gemini
+    
+    @staticmethod
+    def LLAMA_3dot2():
+        llama_3dot2 = LlamaCpp(
+            model_path=os.environ.get('MODEL_PATH_LLAMA_3dot2_IT_Q4_GGUF'),
+            n_gpu_layers=-1,
+            n_batch=1024,
+            n_ctx=8192,
+            temperature=0,
+            max_tokens=2000,
+            f16_kv=True,
+            verbose=False,
+        )
+        return llama_3dot2

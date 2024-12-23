@@ -110,7 +110,7 @@ class MoE:
         
         # Call router
         output = self.router.invoke({
-            'chat_history': self._extract_router_user_messages(state['ephemeral_mem']),
+            # 'chat_history': self._extract_router_user_messages(state['ephemeral_mem']),
             'experts': [f'{expert.name}: {expert.description}' for expert in self.experts.values()],
             'expert_names': self.experts.keys(),
             'input': state['input'],
@@ -141,7 +141,7 @@ class MoE:
         state["next"] = xpert_name
         state["expert_input"] = xpert_input
         state["prev"] = self.router.name
-        state["router_scratchpad"] = output
+        state["router_scratchpad"] += output
 
         return state
     

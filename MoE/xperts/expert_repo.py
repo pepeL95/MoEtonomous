@@ -27,7 +27,7 @@ class ExpertRepo:
         '''You are a master at managing conversations between the user and multimple experts. You must autonimously decides where to route inputs/outputs to.'''
         @staticmethod
         def get_router(llm=LLMs):
-            agent = PersistentNLPAgent(
+            agent = EphemeralNLPAgent(
                 name=ExpertRepo.Router.__name__,
                 llm=llm,
                 prompt_template=PromptRepo.router_react(), # template variables: experts, expert_names, input, scratchpad.
@@ -68,8 +68,7 @@ class ExpertRepo:
             return chat_expert
     
     class WebSearchExpert:
-        '''Excels at searching the web for gathering up-to-date and real-time information. '''
-        # '''Excellent at handling assistant-like tasks (e.g. web searching, scheduling meetings, accessing information about current events, and real-time requests)'''
+        '''Excels at searching the web for gathering up-to-date and real-time information.'''
 
         @staticmethod
         def get_expert(llm:LLMs) -> Expert:
@@ -83,7 +82,7 @@ class ExpertRepo:
                     "You are part of a conversation with other experts who, together, collaborate to fulfill a request.\n"
                     "Your input is given from another expert who needs you to answer it.\n"
                     "You are chosen for a reason! Do not ask for clarifications.\n"
-                    "Before respinding, build a **highly detailed** summary of the results you obtained, including sources.\n"
+                    "Before responding, build a **highly detailed synthesis** of the results you obtained, including sources.\n"
                 ),
             )
             realtime_expert = Expert(
