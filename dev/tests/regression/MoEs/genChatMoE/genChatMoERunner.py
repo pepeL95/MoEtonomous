@@ -21,9 +21,9 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 class GenChatMoERunner:
     @staticmethod
     def get():
-        router = ExpertFactory.get(xpert=ExpertFactory.Directory.Router, llm=LLMs.GEMINI())
-        gen_xpert = ExpertFactory.get(xpert=ExpertFactory.Directory.GeneralKnowledgeExpert, llm=LLMs.GEMINI())
-        web_xpert = ExpertFactory.get(xpert=ExpertFactory.Directory.WebSearchExpert, llm=LLMs.GEMINI())
+        router = ExpertFactory.get(xpert=ExpertFactory.Directory.Router, llm=LLMs.Gemini())
+        gen_xpert = ExpertFactory.get(xpert=ExpertFactory.Directory.GeneralKnowledgeExpert, llm=LLMs.Gemini())
+        web_xpert = ExpertFactory.get(xpert=ExpertFactory.Directory.WebSearchExpert, llm=LLMs.Gemini())
 
         gen_chat_MoE = GenChatMoE(
             name='GenChatOrchestrator',

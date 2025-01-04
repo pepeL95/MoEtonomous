@@ -1,4 +1,5 @@
 from JB007.base.agent import Agent
+from JB007.parsers.prompt import IdentityPromptParser, BasePromptParser
 
 from typing import Union, List
 
@@ -9,6 +10,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate, PromptTemplate
 
+
 class EphemeralNLPAgent(Agent):
     '''Multimodal conversational agent without memory.'''
     def __init__(
@@ -16,11 +18,12 @@ class EphemeralNLPAgent(Agent):
             name: str,
             llm: BaseLLM,
             system_prompt:str = None, 
-            prompt_template:Union[str, List[dict]] = None, 
-            parser:BaseOutputParser = StrOutputParser()
+            prompt_template:Union[str, List[dict]] = None,
+            prompt_parser:BasePromptParser = IdentityPromptParser(),
+            output_parser:BaseOutputParser = StrOutputParser()
             ) -> None:
         
-        super().__init__(name, llm=llm, system_prompt=system_prompt, prompt_template=prompt_template, parser=parser)
+        super().__init__(name, llm=llm, system_prompt=system_prompt, prompt_template=prompt_template, prompt_parser=prompt_parser, output_parser=output_parser)
         self._supported_convo_keys = set(["text", "image_url"])
         # Init agent
         self._make_agent()
@@ -33,17 +36,24 @@ class EphemeralNLPAgent(Agent):
         if self._system_prompt is None and self._prompt_template is None:
             raise ValueError("You must provide at least one of [system_prompt, prompt_template]")
         
+        # To parse, or not to parse, that is the question
+        if self._prompt_parser is None:
+            self.prompt_parser = IdentityPromptParser()
+            
+        if self._output_parser is None:
+            self._output_parser = RunnablePassthrough()
+
+        # Parse prompts
+        sys_prompt = self._system_prompt and self.prompt_parser.parseSys(self._system_prompt)
+        usr_prompt = self._prompt_template and self.prompt_parser.parseUser(self._prompt_template)
+
         # Only a prompt template (i.e. no system prompt) was provided (this is the recommended way to use the agent for llms that require a niche chat template)
         if self._system_prompt is None and self._prompt_template is not None:
             # Define prompt
-            prompt = PromptTemplate.from_template(self._prompt_template)
-
-            # To parse, or not to parse, that is the question
-            if self.parser is None:
-                self.parser = RunnablePassthrough()
+            prompt = PromptTemplate.from_template(usr_prompt)
             
             # Run agent
-            self._agent = prompt | self.llm | self._parser
+            self._agent = prompt | self.llm | self._output_parser
             
             # All done here...
             return
@@ -52,7 +62,7 @@ class EphemeralNLPAgent(Agent):
         if template:= self._prompt_template:
             # str template (text-only)
             if isinstance(template, str):
-                template = HumanMessagePromptTemplate.from_template(self._prompt_template)
+                template = HumanMessagePromptTemplate.from_template(usr_prompt)
            
             # List[str] template (support multimodal)
             elif isinstance(template, list) and all(isinstance(item, dict) for item in template):
@@ -72,17 +82,13 @@ class EphemeralNLPAgent(Agent):
         # Define prompt
         prompt = ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=self._system_prompt),
+                SystemMessage(content=sys_prompt),
                 template or MessagesPlaceholder(variable_name="input")
             ]
         )
-
-        # To parse, or not to parse, that is the question
-        if self.parser is None:
-            self.parser = RunnablePassthrough()
         
         # Create chain
-        self._agent = prompt | self.llm | self._parser
+        self._agent = prompt | self.llm | self._output_parser
 
     def _invoke_with_prompt_template(self, input: Union[str, dict, List[dict]], config: RunnableConfig | None = None, stream:bool=False):
         '''
@@ -100,16 +106,16 @@ class EphemeralNLPAgent(Agent):
             chat_messages = self._compile_template_vars(input)
             
             # To parse, or not to parse, that is the question
-            if self.parser is None:
-                self.parser = RunnablePassthrough()
+            if self._output_parser is None:
+                self._output_parser = RunnablePassthrough()
             
-            # Temporary update chat template
-            anonymous_chain = ChatPromptTemplate.from_messages(chat_messages) | self.llm | self.parser
+            # Ephemerally spawned chat template
+            ephemeral_chain = ChatPromptTemplate.from_messages(chat_messages) | self.llm | self._output_parser
             
             # To stream, or not to stream, that is the question
             if stream:
-                return anonymous_chain.stream({}, config)
-            return anonymous_chain.invoke({}, config)
+                return ephemeral_chain.stream({}, config)
+            return ephemeral_chain.invoke({}, config)
 
         # Invalid input format     
         raise ValueError(f"Incorrect type fed to prompt_template: Should be one of Union[str, dict, List[dict]], but was given {type(input)}")

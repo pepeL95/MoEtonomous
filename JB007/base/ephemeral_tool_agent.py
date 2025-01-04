@@ -1,15 +1,19 @@
+import time
+import random
+
 from typing import List
+
+from JB007.base.agent import Agent
+from JB007.parsers.prompt import BasePromptParser, IdentityPromptParser
+
+from langchain_core.tools import BaseTool
 from langchain_community.llms import BaseLLM
 from langchain_core.messages import BaseMessage
-from JB007.base.agent import Agent
-from langchain_core.tools import BaseTool
-from langchain_core.runnables import RunnableConfig, RunnableLambda, RunnablePassthrough
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import BaseOutputParser
 from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.runnables import RunnableConfig, RunnableLambda, RunnablePassthrough
 
-import time
-import random
 
 class EphemeralToolAgent(Agent):   
     """Tool calling agent without memory."""
@@ -21,11 +25,12 @@ class EphemeralToolAgent(Agent):
             tools: List[BaseTool], 
             prompt_template:str = None, 
             verbose:bool = False, 
-            parser:BaseOutputParser = None, 
+            prompt_parser:BasePromptParser = IdentityPromptParser(),
+            output_parser:BaseOutputParser = None, 
             is_silent_caller:bool = True
             ) -> None:
         
-        super().__init__(name, llm=llm, system_prompt=system_prompt, prompt_template=prompt_template, parser=parser)
+        super().__init__(name, llm=llm, system_prompt=system_prompt, prompt_template=prompt_template, prompt_parser=prompt_parser, output_parser=output_parser)
         self._tools = tools
         self._is_silent_caller = is_silent_caller
         self._verbose = verbose
@@ -36,13 +41,25 @@ class EphemeralToolAgent(Agent):
 
     def _make_agent(self):
         """Create a tool_calling_agent using Langchain."""
+        # Sanity check
         if self._prompt_template is None and self._system_prompt is None:
             raise ValueError("Must have at least one of Union[system_prompt, prompt_template].")
         
+        # To parse, or not to parse, that is the question
+        if self._prompt_parser is None:
+            self.prompt_parser = IdentityPromptParser()
+            
+        if self._output_parser is None:
+            self.output_parser = RunnablePassthrough()
+
+        # Parse prompts
+        sys_prompt = self._system_prompt and self.prompt_parser.parseSys(self._system_prompt)
+        usr_prompt = self._prompt_template and self.prompt_parser.parseUser(self._prompt_template)
+
         # Build prompt
         human_template = ("human", "{input}")
         if self._prompt_template is not None:
-            human_template = ('human', self._prompt_template)
+            human_template = ('human', usr_prompt)
         
         if self._system_prompt is None:
             prompt = ChatPromptTemplate.from_messages([
@@ -57,7 +74,7 @@ class EphemeralToolAgent(Agent):
             return
         
         prompt = ChatPromptTemplate.from_messages([
-                ("system", self._system_prompt),
+                ("system", sys_prompt),
                 human_template,
                 ("placeholder", "{agent_scratchpad}"),
                 ])
@@ -72,13 +89,10 @@ class EphemeralToolAgent(Agent):
         if not any([isinstance(input, str), isinstance(input, dict)]):
             raise ValueError(f'Input must be one of Union[str, dict]. Got {type(input)}')
         
-        if self._parser is None:
-            self.parser = RunnablePassthrough()
-        
         agent_executor = (
             AgentExecutor(agent=self._agent, tools=self._tools, verbose=self._verbose, handle_parsing_errors=True)
             | RunnableLambda(lambda response: response["output"]) 
-            | self._parser
+            | self._output_parser
         )
         
         if stream:

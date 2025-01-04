@@ -34,12 +34,12 @@ class PreRetrievalMoE:
         
         query_xxpert = ExpertFactory.get(
             xpert=ExpertFactory.Directory.QueryXtractionXpert,
-            llm=LLMs.GEMINI()
+            llm=LLMs.Gemini()
         )
         
         hyde_xpert = ExpertFactory.get(
             xpert=ExpertFactory.Directory.HyDExpert,
-            llm=LLMs.GEMINI()
+            llm=LLMs.Gemini()
         )
 
         # Init MoE

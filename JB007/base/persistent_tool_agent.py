@@ -10,9 +10,22 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.agents import create_tool_calling_agent
 from langchain_core.runnables import RunnablePassthrough
 
+from JB007.parsers.prompt import IdentityPromptParser
+
 class PersistentToolAgent(EphemeralToolAgent):
-    def __init__(self, name, llm, tools, system_prompt=None, prompt_template=None, verbose=False, parser=None, is_silent_caller=True):
-        super().__init__(name, llm=llm, system_prompt=system_prompt, tools=tools, prompt_template=prompt_template, verbose=verbose, parser=parser, is_silent_caller=is_silent_caller)
+    def __init__(
+            self,
+            name,
+            llm,
+            tools,
+            system_prompt=None,
+            prompt_template=None,
+            verbose=False,
+            prompt_parser=IdentityPromptParser(),
+            output_parser=None,
+            is_silent_caller=True):
+        
+        super().__init__(name, llm=llm, system_prompt=system_prompt, tools=tools, prompt_template=prompt_template, verbose=verbose, prompt_parser=prompt_parser, output_parser=output_parser, is_silent_caller=is_silent_caller)
 
 ######################################## PRIVATE METHODS #########################################################
 
@@ -21,7 +34,11 @@ class PersistentToolAgent(EphemeralToolAgent):
         if self._prompt_template is None and self._system_prompt is None:
             raise ValueError("Must have at least one of Union[system_prompt, prompt_template].")
         
-        human_template = ("human", self._prompt_template) if self.prompt_template else ("human", "{input}")
+        # Parse prompts
+        sys_prompt = self._system_prompt and self.prompt_parser.parseSys(self._system_prompt)
+        usr_prompt = self.prompt_parser.parseUser(self._prompt_template if self.prompt_template else "{input}")
+
+        human_template = ("human", usr_prompt)
         if self._system_prompt is None:
             prompt = ChatPromptTemplate.from_messages([
                 ("placeholder", "{chat_history}"),
@@ -31,7 +48,7 @@ class PersistentToolAgent(EphemeralToolAgent):
         
         if self._system_prompt is not None:            
             prompt = ChatPromptTemplate.from_messages([
-                    ("system", self._system_prompt),
+                    ("system", sys_prompt),
                     ("placeholder", "{chat_history}"),
                     human_template,
                     ("placeholder", "{agent_scratchpad}"),
@@ -54,13 +71,13 @@ class PersistentToolAgent(EphemeralToolAgent):
             raise ValueError(f'Input must be one of Union[str, dict, List[BaseMessage]]. Got {type(input)}')
 
         # To parse, or not to parse, that is the question
-        if self.parser is None:
-            self.parser = RunnablePassthrough()
+        if self._output_parser is None:
+            self._output_parser = RunnablePassthrough()
 
         agent_executor = (
             AgentExecutor(agent=self._agent, tools=self._tools, verbose=self._verbose, handle_parsing_errors=True)
             | RunnableLambda(lambda response: response["output"]) 
-            | self._parser
+            | self._output_parser
         )
         
         # To stream, or not to stream, that is the question

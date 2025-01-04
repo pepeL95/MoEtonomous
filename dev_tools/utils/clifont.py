@@ -25,9 +25,9 @@ def input_bold(message):
     '''wrapper for the input() function, showing prompt message in bold'''
     return input(f"{CLIFont.bold}{message}{CLIFont.reset}")
 
-def print_cli_message(message):
+def print_cli_message(message, flush=False, end='\n'):
     # Replace bolded text (e.g. **text**) for the actual bold using shell fonts
     pattern = r"\*\*(.*?)\*\*"
     def repl(match):
         return f"{CLIFont.bold}{match.group(1)}{CLIFont.reset}"
-    print(re.sub(pattern, repl, message))
+    print(re.sub(pattern, repl, message), flush=flush, end=end)

@@ -9,6 +9,8 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate, PromptTemplate
 
+from JB007.parsers.prompt import BasePromptParser, IdentityPromptParser
+
 
 class PersistentNLPAgent(EphemeralNLPAgent):
     '''Multimodal conversational agent without memory.'''
@@ -17,11 +19,14 @@ class PersistentNLPAgent(EphemeralNLPAgent):
             name: str, 
             llm: BaseLLM, 
             system_prompt: str = None, 
-            prompt_template: str = None, 
-            parser: BaseOutputParser = StrOutputParser()
+            prompt_template: str = None,
+            prompt_parser:BasePromptParser = IdentityPromptParser(), 
+            output_parser: BaseOutputParser = StrOutputParser()
             ) -> None:
-        super().__init__(name, llm, system_prompt, prompt_template, parser)
+        
+        super().__init__(name, llm, system_prompt, prompt_template, prompt_parser, output_parser)
         self._supported_convo_keys = set(["text", "image_url"])
+    
 
 ######################################## CLASS METHODS #########################################################
 
@@ -64,16 +69,20 @@ class PersistentNLPAgent(EphemeralNLPAgent):
         if self._system_prompt is None and self._prompt_template is None:
             raise ValueError("You must provide at least one of [system_prompt, prompt_template]")
         
+        # Parse prompts
+        sys_prompt = self._system_prompt and self.prompt_parser.parseSys(self._system_prompt)
+        usr_prompt = self._prompt_template and self.prompt_parser.parseUser(self._prompt_template)
+
         # Only a prompt template provided (i.e. no system_prompt)
         if self._system_prompt is None and self._prompt_template is not None:
-            prompt = PromptTemplate.from_template(self._prompt_template)
+            prompt = PromptTemplate.from_template(usr_prompt)
 
             # To parse, or not to parse, that is the question
-            if self.parser is None:
-                self.parser = RunnablePassthrough()
+            if self._output_parser is None:
+                self._output_parser = RunnablePassthrough()
 
             # Create chain
-            self._agent = prompt | self.llm | self._parser
+            self._agent = prompt | self.llm | self._output_parser
 
             # All done here...
             return
@@ -104,17 +113,17 @@ class PersistentNLPAgent(EphemeralNLPAgent):
         # Define prompt
         prompt = ChatPromptTemplate.from_messages(
             [
-                SystemMessage(content=self._system_prompt),
+                SystemMessage(content=sys_prompt),
                 MessagesPlaceholder(variable_name="chat_history", optional=True),
                 template or MessagesPlaceholder(variable_name="input")
             ]
         )
 
         # To parse, or not to parse, that is the question
-        if self.parser is None:
-            self.parser = RunnablePassthrough()
+        if self._output_parser is None:
+            self._output_parser = RunnablePassthrough()
 
-        self._agent = prompt | self.llm | self._parser
+        self._agent = prompt | self.llm | self._output_parser
 
     def _invoke_with_prompt_template(self, input: str | dict | List[dict], config: RunnableConfig | None = None, stream:bool=False):
         # Input as a dict
@@ -134,11 +143,11 @@ class PersistentNLPAgent(EphemeralNLPAgent):
             chat_messages = self._compile_template_vars(input)
             
             # To parse, or not to parse, that is the question
-            if self.parser is None:
-                self.parser = RunnablePassthrough()
+            if self._output_parser is None:
+                self._output_parser = RunnablePassthrough()
             
             # Temporary update chat template
-            anonymous_chain = ChatPromptTemplate.from_messages(chat_messages) | self.llm | self._parser
+            anonymous_chain = ChatPromptTemplate.from_messages(chat_messages) | self.llm | self._output_parser
 
             # To stream, or not to stream, that is the question
             if stream:

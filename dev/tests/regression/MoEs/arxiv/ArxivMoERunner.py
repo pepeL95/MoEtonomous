@@ -18,10 +18,10 @@ class ArxivMoERunner:
     @staticmethod
     def get():
         # Create router & xperts
-        router = ExpertFactory.get(ExpertFactory.Directory.Router, llm=LLMs.GEMINI())
-        query_xpert = ExpertFactory.get(ExpertFactory.Directory.ArxivQbuilderXpert, llm=LLMs.GEMINI())
-        search_xpert = ExpertFactory.get(ExpertFactory.Directory.ArxivSearchXpert, llm=LLMs.GEMINI())
-        sigma_xpert = ExpertFactory.get(ExpertFactory.Directory.ArxivSigmaXpert, llm=LLMs.GEMINI())
+        router = ExpertFactory.get(ExpertFactory.Directory.Router, llm=LLMs.Gemini())
+        query_xpert = ExpertFactory.get(ExpertFactory.Directory.ArxivQbuilderXpert, llm=LLMs.Gemini())
+        search_xpert = ExpertFactory.get(ExpertFactory.Directory.ArxivSearchXpert, llm=LLMs.Gemini())
+        sigma_xpert = ExpertFactory.get(ExpertFactory.Directory.ArxivSigmaXpert, llm=LLMs.Gemini())
 
         # Init & return MoE
         arxivMoE = ArxivMoE(

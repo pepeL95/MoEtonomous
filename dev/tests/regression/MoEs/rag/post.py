@@ -45,7 +45,7 @@ class PostRetrievalMoE:
         
         context_xpert = ExpertFactory.get(
             xpert=ExpertFactory.Directory.ContextExpert, 
-            llm=LLMs.GEMINI(),
+            llm=LLMs.Gemini(),
         )
 
         # Init MoE

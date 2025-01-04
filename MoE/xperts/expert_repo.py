@@ -76,7 +76,7 @@ class ExpertRepo:
                 name=ExpertRepo.WebSearchExpert.__name__,
                 llm=llm,
                 tools=[Toolbox.Websearch.duck_duck_go_tool()],
-                parser=StrOutputParser(),
+                output_parser=StrOutputParser(),
                 system_prompt=(
                     "You are an web search expert who gathers information based in a given query. Use the duck_duck_go_tool provided for searching the web.\n"
                     "You are part of a conversation with other experts who, together, collaborate to fulfill a request.\n"
@@ -112,7 +112,7 @@ class ExpertRepo:
                     Toolbox.Jira.update_jira_issue,
                     Toolbox.Jira.transition_issue_state,
                     ],
-                parser=StrOutputParser(),
+                output_parser=StrOutputParser(),
                 # verbose=True,
             )
             realtime_expert = Expert(
@@ -163,7 +163,7 @@ class ExpertRepo:
                             "User: {input}\n"
                             "You: "
                         ),
-                        parser=JsonOutputParser()
+                        output_parser=JsonOutputParser()
                     )
 
                     query_augmentation_xpert = Expert(
@@ -278,13 +278,13 @@ class ExpertRepo:
             def get_expert(llm:LLMs):
                 query_agent = EphemeralNLPAgent(
                     name='ArxivQbuilderAgent',
-                    llm=LLMs.GEMINI(),
+                    llm=LLMs.Gemini(),
                     system_prompt=(
                         'You are an dexterous at taking a search query and converting it into a valid format for searching the Arxiv api for scholar papers. '
                         'Consider the user query and follow the instructions thoroughly'
                         ),
                     prompt_template=Prompters.Arxiv.ApiQueryBuildFewShot(),
-                    parser=ArxivParser.ApiSearchItems.to_json()
+                    output_parser=ArxivParser.ApiSearchItems.to_json()
                 )
                 
                 query_xpert = Expert(
@@ -300,7 +300,7 @@ class ExpertRepo:
             def get_expert(llm:LLMs):
                 search_agent = EphemeralToolAgent(
                     name='ArxivSearchAgent',
-                    llm=LLMs.GEMINI(),
+                    llm=LLMs.Gemini(),
                     system_prompt=(
                         'You are a search expert, specialized in searching the Arxiv api for scholar papers.\n'
                         'Your task is to build a query and then execute it.\n' 
@@ -323,7 +323,7 @@ class ExpertRepo:
                     name='ArxivSigmaAgent',
                     system_prompt='You are an nlp expert, specialized in summarization.',
                     prompt_template=Prompters.Arxiv.AbstractSigma(),
-                    llm=LLMs.GEMINI(),
+                    llm=LLMs.Gemini(),
                 )
                 
                 sigma_xpert = Expert(
