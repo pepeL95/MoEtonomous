@@ -18,7 +18,7 @@ class BasePromptParser:
         raise NotImplementedError("Subclass must implement abstract method")
     
     @abstractmethod
-    def parseSystemUser(self, sys:str, usr:str):
+    def parseSystemUser(self, mssgs:dict[str]):
         raise NotImplementedError("Subclass must implement abstract method")
 
 class IdentityPromptParser(BasePromptParser):
@@ -36,7 +36,14 @@ class IdentityPromptParser(BasePromptParser):
         return mssg
 
     def parseSystemUser(self, sys:str, usr:str):
-        ret = sys + '\n\n' + usr
+        _sys, _usr = "", "{input}"
+        
+        if sys:
+            _sys = self.parseSys(sys) + '\n\n'
+        if usr:
+            _usr = self.parseUser(usr)
+        
+        ret = _sys + _usr
         if self.verbosity != Debug.Verbosity.quiet:
             print(f'{CLIFont.bold}{CLIFont.purple}{ret}{CLIFont.reset}')
         return ret

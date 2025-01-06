@@ -1,9 +1,10 @@
 from abc import abstractmethod
 from typing import List, Optional
 
-from langchain_community.llms import BaseLLM
 from langchain_core.messages import BaseMessage
+from langchain_core.messages import  HumanMessage, AIMessage
 from langchain_core.runnables import Runnable, RunnableConfig
+from langchain_core.language_models import BaseLLM, BaseChatModel
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 
 from JB007.parsers.prompt import BasePromptParser, IdentityPromptParser
@@ -13,11 +14,11 @@ class Agent(Runnable):
     def __init__(
             self,
             name:str,
-            llm:BaseLLM = None,
+            llm:BaseLLM | BaseChatModel = None,
             system_prompt:str = None,
             prompt_template:str = None,
             prompt_parser:BasePromptParser = IdentityPromptParser(),
-            output_parser:BaseOutputParser = StrOutputParser()
+            output_parser:BaseOutputParser | Runnable = StrOutputParser()
         ) -> None:
         
         self._name = name
@@ -26,6 +27,7 @@ class Agent(Runnable):
         self._prompt_template = prompt_template
         self._prompt_parser = prompt_parser
         self._output_parser = output_parser
+        self._supported_convo_keys = set(["text", "image_url"])
         self._agent = None
 
 ################################################## GETTERS #####################################################
@@ -58,8 +60,8 @@ class Agent(Runnable):
 
     @llm.setter
     def llm(self, llm:BaseLLM):
-        if not isinstance(llm, BaseLLM):
-            raise TypeError(f'llm must be of type BaseLLM. Got {type(llm)}')
+        if not isinstance(llm, (BaseLLM, BaseChatModel)):
+            raise TypeError(f'llm must be of type Union[BaseLLM, BaseChatModel]. Got {type(llm)}')
         
         self._llm = llm
         self._make_agent()
@@ -90,8 +92,8 @@ class Agent(Runnable):
 
     @output_parser.setter
     def output_parser(self, output_parser:BaseOutputParser):
-        if not isinstance(output_parser, BaseOutputParser):
-            raise TypeError(f'output_parser must be of type BaseOutputParser. Got {type(output_parser)}')
+        if not isinstance(output_parser, (BaseOutputParser, Runnable)):
+            raise TypeError(f'output_parser must be of type Union[BaseOutputParser, Runnable]. Got {type(output_parser)}')
         
         self._output_parser = output_parser
         self._make_agent()
@@ -124,3 +126,22 @@ class Agent(Runnable):
         if not self._prompt_template:
             return self._invoke_without_prompt_template(input, config, stream=True)
         return self._invoke_with_prompt_template(input, config, stream=True)
+    
+    def _compile_user_ai_message(self, messages:list, entity:str='human'):
+        # Sanity checks...
+        if entity not in {'ai', 'human'}:
+            raise ValueError(f'Entity should be one of [ai, human]. Got {entity}')
+        
+        if not all(isinstance(msg, dict) for msg in messages):
+            raise ValueError(f'Messages should be a List[dict].')
+
+        # Add contents
+        contents=[]
+        for obj in messages:
+            key = next(iter(obj))
+            if not key in self._supported_convo_keys:
+                raise ValueError(f"Unsupported key: Input keys shoud be one of Union['text', 'image_url']), but was given '{key}'")
+            contents.append({"type": key, f"{key}": obj[key]})
+    
+        # Create the message with contents
+        return HumanMessage(content=contents, role='user') if entity == 'human' else AIMessage(content=contents, role='assistant')

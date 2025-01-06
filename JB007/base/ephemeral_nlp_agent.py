@@ -3,8 +3,8 @@ from JB007.parsers.prompt import IdentityPromptParser, BasePromptParser
 
 from typing import Union, List
 
-from langchain_community.llms import BaseLLM
 from langchain_core.messages.base import BaseMessage
+from langchain_core.language_models import BaseLLM, BaseChatModel
 from langchain_core.runnables import RunnableConfig, RunnablePassthrough
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
@@ -16,7 +16,7 @@ class EphemeralNLPAgent(Agent):
     def __init__(
             self, 
             name: str,
-            llm: BaseLLM,
+            llm: BaseLLM | BaseChatModel,
             system_prompt:str = None, 
             prompt_template:Union[str, List[dict]] = None,
             prompt_parser:BasePromptParser = IdentityPromptParser(),
@@ -43,14 +43,14 @@ class EphemeralNLPAgent(Agent):
         if self._output_parser is None:
             self._output_parser = RunnablePassthrough()
 
-        # Parse prompts
-        sys_prompt = self._system_prompt and self.prompt_parser.parseSys(self._system_prompt)
-        usr_prompt = self._prompt_template and self.prompt_parser.parseUser(self._prompt_template)
 
-        # Only a prompt template (i.e. no system prompt) was provided (this is the recommended way to use the agent for llms that require a niche chat template)
-        if self._system_prompt is None and self._prompt_template is not None:
+        ############## LLM Models ####################
+        if isinstance(self._llm, BaseLLM):
+            # Prepare prompt template
+            parsed_template = self.prompt_parser.parseSystemUser(self._system_prompt, self.prompt_template or "{input}")
+
             # Define prompt
-            prompt = PromptTemplate.from_template(usr_prompt)
+            prompt = PromptTemplate.from_template(parsed_template)
             
             # Run agent
             self._agent = prompt | self.llm | self._output_parser
@@ -58,45 +58,49 @@ class EphemeralNLPAgent(Agent):
             # All done here...
             return
 
-        # Both, system prompt and prompt template were provided (this is the recommended way for well-established llms such as chatgpt, gemini, etc...)
-        if template:= self._prompt_template:
+        ############## Chat Models ####################
+        human_template = HumanMessagePromptTemplate.from_template("{input}")
+        if self._prompt_template:
             # str template (text-only)
-            if isinstance(template, str):
-                template = HumanMessagePromptTemplate.from_template(usr_prompt)
+            if isinstance(self._prompt_template, str):
+                human_template = HumanMessagePromptTemplate.from_template(self._prompt_template)
            
-            # List[str] template (support multimodal)
-            elif isinstance(template, list) and all(isinstance(item, dict) for item in template):
+            # List[dict] template (support multimodal)
+            elif isinstance(self._prompt_template, list) and all(isinstance(item, dict) for item in self._prompt_template):
                 # Add contents
                 contents=[]
-                for obj in template:
+                for obj in self._prompt_template:
                     key = next(iter(obj))
                     if not key in self._supported_convo_keys:
                         raise ValueError(f"Unsupported key: Input keys shoud be one of Union['text', 'image_url']), but was given '{key}'")
                     contents.append({"type": key, f"{key}": obj[key]})
-                template = HumanMessagePromptTemplate.from_template(contents)
+                human_template = HumanMessagePromptTemplate.from_template(contents)
             
             # Invalid format for prompt_template provided
             else:
                 raise ValueError(f"Incorrect type for template: Should be one of Union[str, List[dict]]), but was given {type(input)}")
 
-        # Define prompt
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                SystemMessage(content=sys_prompt),
-                template or MessagesPlaceholder(variable_name="input")
-            ]
-        )
+        # Define messages
+        messages = [human_template]
+        
+        # Prepend system message if exists...
+        if self._system_prompt:
+            messages.insert(0, SystemMessage(content=self._system_prompt))
+
+        # Build prompt    
+        prompt = ChatPromptTemplate.from_messages(messages)
         
         # Create chain
-        self._agent = prompt | self.llm | self._output_parser
+        self._agent = prompt | self._llm | self._output_parser
 
     def _invoke_with_prompt_template(self, input: Union[str, dict, List[dict]], config: RunnableConfig | None = None, stream:bool=False):
         '''
         Invoke agent when a prompt template is defined.
         input should match the prompt template definition accordingly.
         '''
-        # Input as a dict
+        # Input as a dictionary or string
         if isinstance(input, dict) or isinstance(input, str):
+            # To stream, or not to stream, that is the question
             if stream:
                 return self._agent.stream(input, config)
             return self._agent.invoke(input, config)
@@ -105,17 +109,13 @@ class EphemeralNLPAgent(Agent):
         if isinstance(input, list) and all(isinstance(element, dict) for element in input):
             chat_messages = self._compile_template_vars(input)
             
-            # To parse, or not to parse, that is the question
-            if self._output_parser is None:
-                self._output_parser = RunnablePassthrough()
-            
-            # Ephemerally spawned chat template
-            ephemeral_chain = ChatPromptTemplate.from_messages(chat_messages) | self.llm | self._output_parser
+            # Ephemeral chain
+            anonymous_chain = ChatPromptTemplate.from_messages(chat_messages) | self.llm | self._output_parser
             
             # To stream, or not to stream, that is the question
             if stream:
-                return ephemeral_chain.stream({}, config)
-            return ephemeral_chain.invoke({}, config)
+                return anonymous_chain.stream({}, config)
+            return anonymous_chain.invoke({}, config)
 
         # Invalid input format     
         raise ValueError(f"Incorrect type fed to prompt_template: Should be one of Union[str, dict, List[dict]], but was given {type(input)}")
@@ -158,25 +158,6 @@ class EphemeralNLPAgent(Agent):
         return self._agent.invoke(messages, config)
 
 ############################################# CLASS PRIVATE METHODS ####################################################
-
-    def _compile_user_ai_message(self, messages:list, entity:str='human'):
-        # Sanity checks...
-        if entity not in {'ai', 'human'}:
-            raise ValueError(f'Entity should be one of [ai, human]. Got {entity}')
-        
-        if not all(isinstance(msg, dict) for msg in messages):
-            raise ValueError(f'Messages should be a List[dict].')
-
-        # Add contents
-        contents=[]
-        for obj in messages:
-            key = next(iter(obj))
-            if not key in self._supported_convo_keys:
-                raise ValueError(f"Unsupported key: Input keys shoud be one of Union['text', 'image_url']), but was given '{key}'")
-            contents.append({"type": key, f"{key}": obj[key]})
-    
-        # Create the message with contents
-        return HumanMessage(content=contents, role='user') if entity == 'human' else AIMessage(content=contents, role='assistant')
 
     def _compile_template_vars(self, input):
         '''
