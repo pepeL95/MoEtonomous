@@ -92,7 +92,7 @@ class EphemeralToolAgent(Agent):
         
         # Handle langchain side effect 
         if self._is_silent_caller:
-            anonymous_chain = anonymous_chain | self._identity_fn
+            self._agent = self._agent | self._identity_fn
 
     def _invoke_with_prompt_template(self, input:str | dict | List[dict], config: RunnableConfig | None = None, stream:bool=False):    
         agent_executor = (

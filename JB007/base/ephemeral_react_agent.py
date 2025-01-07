@@ -189,7 +189,7 @@ class EphemeralReactAgent(Agent):
             HumanMessage(contents=[...])
         ]
         '''
-        chat_messages = self._agent.first.messages.copy()
+        chat_messages = self._agent.middle[0].messages.copy()
         contents = []
         # Iterate through input objects (e.g. [{'template_vars': [...]}, {'text': 'some text'}, ...])
         for obj in input:
@@ -203,10 +203,10 @@ class EphemeralReactAgent(Agent):
             if key == "template_vars":
                 # {template_var_i_key: template_var_i_value, ...}
                 kwargs = obj[key]
-                chat_messages[-1] = chat_messages[-1].format(**kwargs)
-                # Note: at this point messages[-1] is always a HumanMessage (since we formatted it)
-                # Note: template_messages[-1].content can only be Union[str, List[dict]]
-                content = chat_messages[-1].content 
+                chat_messages[-2] = chat_messages[-2].format(**kwargs)
+                # Note: at this point messages[-2] is always a HumanMessage (since we formatted it)
+                # Note: template_messages[-2].content can only be Union[str, List[dict]]
+                content = chat_messages[-2].content 
                 # Parse content to valid List[dict] (if necessary)
                 if isinstance(content, str):
                     content = [{'type': 'text', 'text': content}]
@@ -216,18 +216,20 @@ class EphemeralReactAgent(Agent):
             else:
                 contents.append({"type": key, f"{key}": obj[key]})
 
-        # If at this point chat_messages[-1] is a HumanMessagePromptTemplate still, convert it to HumanMessage
-        if isinstance(chat_messages[-1], HumanMessagePromptTemplate):
+        # If at this point chat_messages[-2] is a HumanMessagePromptTemplate still, convert it to HumanMessage
+        if isinstance(chat_messages[-2], HumanMessagePromptTemplate):
             # But, we must make sure that it doesnt have input_variables. If it does, then the user didnt provide template_vars mistakenly
-            if chat_messages[-1].input_variables:
+            if chat_messages[-2].input_variables:
                 raise ValueError('You must provide the all required template_vars')
             # Otherwise, the prompt template was just plain text with no input variables, so use the template as text.
-            content = [{'type': 'text', 'text': prompt.template} for prompt in chat_messages[-1].prompt]
+            content = [{'type': 'text', 'text': prompt.template} for prompt in chat_messages[-2].prompt]
             contents = content + contents
 
         # Update the messages
-        chat_messages[-1] = HumanMessage(content=contents)
+        chat_messages[-2] = HumanMessage(content=contents)
+
         return chat_messages
+    
 ############################################# PUBLIC METHODS ####################################################
 
     def get_chain(self):
