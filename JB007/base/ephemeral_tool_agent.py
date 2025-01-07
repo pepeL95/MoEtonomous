@@ -1,6 +1,3 @@
-import time
-import random
-
 from typing import List
 
 from JB007.base.agent import Agent
@@ -13,7 +10,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.language_models import BaseLLM, BaseChatModel
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.runnables import RunnableConfig, RunnableLambda, RunnablePassthrough
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder
 
 
 class EphemeralToolAgent(Agent):   
@@ -53,23 +50,10 @@ class EphemeralToolAgent(Agent):
         if self._output_parser is None:
             self.output_parser = RunnablePassthrough()
 
-        ############## LLM Models #################### TODO:
+        ############## LLM Models ####################
 
         if isinstance(self._llm, BaseLLM):
-            # Parse prompt template
-            parsed_template = self.prompt_parser.parseSystemUser(self._system_prompt, self.prompt_template or "{input}")
-
-            # Define prompt
-            prompt = PromptTemplate.from_template(parsed_template)
-            
-            # Make agentic chain
-            if self._is_silent_caller:
-                self._agent = create_tool_calling_agent(self._llm, self._tools, prompt) | self._identity_fn
-            else:
-                self._agent = create_tool_calling_agent(self._llm, self._tools, prompt)
-            
-            # All done here...
-            return
+            raise ValueError('The LLM provided does not support bind_tools(). Use the EphemeralReactAgent with this model instead.')
         
         ############## Chat Models ####################
 

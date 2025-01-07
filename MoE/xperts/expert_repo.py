@@ -3,8 +3,6 @@ from JB007.parsers.output import ArxivParser
 from JB007.prompters.prompters import Prompters
 from JB007.base.ephemeral_nlp_agent import EphemeralNLPAgent
 from JB007.base.ephemeral_tool_agent import EphemeralToolAgent
-from JB007.base.persistent_nlp_agent import PersistentNLPAgent
-from JB007.base.persistent_tool_agent import PersistentToolAgent
 
 from dev_tools.enums.llms import LLMs
 
@@ -48,7 +46,7 @@ class ExpertRepo:
         '''Excellent expert on a wide range of topics such as coding, math, history, an much more!!. Default to this expert when not sure which expert to use.'''
         @staticmethod
         def get_expert(llm:LLMs) -> Expert:
-            chat_agent = PersistentNLPAgent(
+            chat_agent = EphemeralNLPAgent(
                 name=ExpertRepo.GeneralKnowledgeExpert.__name__,
                 llm=llm,
                 system_prompt=(
@@ -72,7 +70,7 @@ class ExpertRepo:
 
         @staticmethod
         def get_expert(llm:LLMs) -> Expert:
-            tool_agent = PersistentToolAgent(
+            tool_agent = EphemeralToolAgent(
                 name=ExpertRepo.WebSearchExpert.__name__,
                 llm=llm,
                 tools=[Toolbox.Websearch.duck_duck_go_tool()],
@@ -97,7 +95,7 @@ class ExpertRepo:
         
         @staticmethod
         def get_expert(llm:LLMs) -> Expert:
-            jira_expert = PersistentToolAgent(
+            jira_expert = EphemeralToolAgent(
                 llm=llm,
                 name=ExpertRepo.JiraExpert.__name__,
                 system_prompt=(
