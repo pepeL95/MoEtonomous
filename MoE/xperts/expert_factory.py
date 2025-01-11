@@ -1,5 +1,5 @@
 from MoE.xperts.expert_repo import ExpertRepo
-from dev_tools.enums.llms import LLMs
+from langchain_core.language_models import BaseChatModel, BaseLLM
 
 class ExpertFactory:
     class Directory:
@@ -18,7 +18,7 @@ class ExpertFactory:
         ListPalExpert:str = 'ListPalExpert'
 
     @staticmethod
-    def get(xpert:Directory, llm:LLMs, **kwargs):
+    def get(xpert:Directory, llm:BaseChatModel | BaseLLM, **kwargs):
         if xpert == ExpertFactory.Directory.Router:
             return ExpertRepo.Router.get_router(llm=llm)
         if xpert == ExpertFactory.Directory.GeneralKnowledgeExpert:

@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import  HumanMessage, AIMessage
-from langchain_core.runnables import Runnable, RunnableConfig
+from langchain_core.runnables import Runnable, RunnableConfig, RunnableBinding
 from langchain_core.language_models import BaseLLM, BaseChatModel
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 
@@ -57,10 +57,15 @@ class Agent(Runnable):
         return self._name
     
 ################################################## SETTERS #####################################################
-
+    @name.setter
+    def name(self, name:str):
+        if not isinstance(name, str):
+            raise TypeError(f'system_prompt must be of type str. Got {type(name)}')
+        self._name = name
+        
     @llm.setter
     def llm(self, llm:BaseLLM):
-        if not isinstance(llm, (BaseLLM, BaseChatModel)):
+        if not isinstance(llm, (BaseLLM, BaseChatModel, RunnableBinding)):
             raise TypeError(f'llm must be of type Union[BaseLLM, BaseChatModel]. Got {type(llm)}')
         
         self._llm = llm

@@ -13,7 +13,7 @@ class GenChatMoE(MoE):
     def run_gen_xpert(self, state: MoE.State, xpert: Expert) -> dict:
         output = xpert.invoke({
             'input': state['expert_input'],
-            'chat_history': state['ephemeral_mem'].messages[-5:],
+            'context': state['ephemeral_mem'].messages[-5:] or '',
         })
 
         state['next'] = self.router.name
@@ -23,7 +23,7 @@ class GenChatMoE(MoE):
     def run_web_xpert(self, state: MoE.State, xpert: Expert) -> dict:
         output = xpert.invoke({
             'input': state['expert_input'],
-            'chat_history': state['ephemeral_mem'].messages[-5:]
+            'context': state['ephemeral_mem'].messages[-5:]
         })
 
         state['next'] = self.router.name

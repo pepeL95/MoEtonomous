@@ -4,17 +4,17 @@ from JB007.parsers.prompt import IdentityPromptParser, BasePromptParser
 from typing import Union, List
 
 from langchain_core.messages.base import BaseMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.language_models import BaseLLM, BaseChatModel
 from langchain_core.runnables import RunnableConfig, RunnablePassthrough
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate, PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate, SystemMessagePromptTemplate
 
 
 class EphemeralNLPAgent(Agent):
     '''Multimodal conversational agent without memory.'''
     def __init__(
-            self, 
+            self,
             name: str,
             llm: BaseLLM | BaseChatModel,
             system_prompt:str = None, 
@@ -43,12 +43,12 @@ class EphemeralNLPAgent(Agent):
         if self._output_parser is None:
             self._output_parser = RunnablePassthrough()
 
-
         ############## LLM Models ####################
+        
         if isinstance(self._llm, BaseLLM):
             # Prepare prompt template
             parsed_template = self.prompt_parser.parseSystemUser(self._system_prompt, self.prompt_template or "{input}")
-
+            print(parsed_template)
             # Define prompt
             prompt = PromptTemplate.from_template(parsed_template)
             
@@ -59,33 +59,16 @@ class EphemeralNLPAgent(Agent):
             return
 
         ############## Chat Models ####################
-        human_template = HumanMessagePromptTemplate.from_template("{input}")
-        if self._prompt_template:
-            # str template (text-only)
-            if isinstance(self._prompt_template, str):
-                human_template = HumanMessagePromptTemplate.from_template(self._prompt_template)
-           
-            # List[dict] template (support multimodal)
-            elif isinstance(self._prompt_template, list) and all(isinstance(item, dict) for item in self._prompt_template):
-                # Add contents
-                contents=[]
-                for obj in self._prompt_template:
-                    key = next(iter(obj))
-                    if not key in self._supported_convo_keys:
-                        raise ValueError(f"Unsupported key: Input keys shoud be one of Union['text', 'image_url']), but was given '{key}'")
-                    contents.append({"type": key, f"{key}": obj[key]})
-                human_template = HumanMessagePromptTemplate.from_template(contents)
-            
-            # Invalid format for prompt_template provided
-            else:
-                raise ValueError(f"Incorrect type for template: Should be one of Union[str, List[dict]]), but was given {type(input)}")
+        
+        # Build user template
+        human_template = HumanMessagePromptTemplate.from_template(self._prompt_parser.parseUser(self._prompt_template or "{input}"))
 
         # Define messages
         messages = [human_template]
         
         # Prepend system message if exists...
         if self._system_prompt:
-            messages.insert(0, SystemMessage(content=self._system_prompt))
+            messages.insert(0, SystemMessagePromptTemplate.from_template(self._prompt_parser.parseSys(self._system_prompt)))
 
         # Build prompt    
         prompt = ChatPromptTemplate.from_messages(messages)
@@ -121,19 +104,18 @@ class EphemeralNLPAgent(Agent):
         raise ValueError(f"Incorrect type fed to prompt_template: Should be one of Union[str, dict, List[dict]], but was given {type(input)}")
 
     def _invoke_without_prompt_template(self, input: Union[str, dict, List[dict], BaseMessage, List[BaseMessage]], config: RunnableConfig | None = None, stream=False):
+        # Must have a system prompt
         messages = {"input": []}
-        
+
         # Input as a str
         if isinstance(input, str):
-            message = HumanMessage(content=input)
-            messages["input"].append(message)
+            messages["input"] = input
         
         # Input as a dict
         elif isinstance(input, dict):
             if 'input' not in input:
                 raise ValueError("Missing 'input' key in your input object. Maybe you meant to provide a prompt_template before invoking?")
-            message = HumanMessage(content=input['input'], role='user')
-            messages['input'].append(message)
+            messages = input
         
         # Input as a BaseMessage
         elif isinstance(input, BaseMessage):
@@ -208,7 +190,6 @@ class EphemeralNLPAgent(Agent):
         return chat_messages
 
 ############################################# PUBLIC METHODS ####################################################
-
 
     def get_chain(self):
         return super().get_chain()

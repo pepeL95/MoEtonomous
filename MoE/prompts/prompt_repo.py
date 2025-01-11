@@ -1,6 +1,6 @@
 class PromptRepo:
     @staticmethod
-    def router_react():
+    def MoE_ReAct():
         ret_prompt = '''\
 ## Your Responsibilities:
 
@@ -23,8 +23,7 @@ class PromptRepo:
 
 ** You MUST use the following format:**
 
-Thought: generate an insightful thought about the current state.
-Plan: break down thought into steps and determine what to do next in order to work towards achieving the goal.
+Thought: generate insights (step by step) about what to do next, given the current state.
 Action: the action to take, must be exactly one of {expert_names}..
 Action Input: the input to selected expert.
 Expert Response: the response from the expert, consider using it before continuing.

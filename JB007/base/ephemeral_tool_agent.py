@@ -6,11 +6,11 @@ from JB007.parsers.prompt import BasePromptParser, IdentityPromptParser
 from langchain_core.tools import BaseTool
 from langchain_core.messages import BaseMessage
 from langchain_core.output_parsers import BaseOutputParser
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.language_models import BaseLLM, BaseChatModel
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.runnables import RunnableConfig, RunnableLambda, RunnablePassthrough
-from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate
 
 
 class EphemeralToolAgent(Agent):   
@@ -18,9 +18,9 @@ class EphemeralToolAgent(Agent):
     def __init__(
             self, 
             name:str, 
-            llm:BaseLLM | BaseChatModel, 
-            system_prompt:str, 
+            llm:BaseChatModel, 
             tools: List[BaseTool], 
+            system_prompt:str = None, 
             prompt_template:str = None, 
             verbose:bool = False, 
             prompt_parser:BasePromptParser = IdentityPromptParser(),
@@ -57,33 +57,15 @@ class EphemeralToolAgent(Agent):
         
         ############## Chat Models ####################
 
-        human_template = HumanMessagePromptTemplate.from_template("{input}")
-        if self._prompt_template:
-            # str template (text-only)
-            if isinstance(self._prompt_template, str):
-                human_template = HumanMessagePromptTemplate.from_template(self._prompt_template)
-           
-            # List[dict] support for multimodal template
-            elif isinstance(self._prompt_template, list) and all(isinstance(item, dict) for item in self._prompt_template):
-                # Add contents
-                contents=[]
-                for obj in self._prompt_template:
-                    key = next(iter(obj))
-                    if not key in self._supported_convo_keys:
-                        raise ValueError(f"Unsupported key: Input keys shoud be one of Union['text', 'image_url']), but was given '{key}'")
-                    contents.append({"type": key, f"{key}": obj[key]})
-                human_template = HumanMessagePromptTemplate.from_template(contents)
-            
-            # Invalid format for prompt_template provided
-            else:
-                raise ValueError(f"Incorrect type for template: Should be one of Union[str, List[dict]]), but was given {type(input)}")
+        # Build user template
+        human_template = HumanMessagePromptTemplate.from_template(self._prompt_parser.parseUser(self._prompt_template or "{input}"))
             
         # Define messages
         messages = [human_template, MessagesPlaceholder(variable_name='agent_scratchpad')]
         
         # Prepend system message if exists...
         if self._system_prompt:
-            messages.insert(0, SystemMessage(content=self._system_prompt))
+            messages.insert(0, SystemMessagePromptTemplate.from_template(self._prompt_parser.parseSys(self._system_prompt)))
         
         prompt = ChatPromptTemplate.from_messages(messages)
         
@@ -144,15 +126,13 @@ class EphemeralToolAgent(Agent):
 
         # Input as a str
         if isinstance(input, str):
-            message = HumanMessage(content=input)
-            messages["input"].append(message)
+            messages['input'] = input
         
         # Input as a dict
         elif isinstance(input, dict):
             if 'input' not in input:
                 raise ValueError("Missing 'input' key in your input object. Maybe you meant to provide a prompt_template before invoking?")
-            message = HumanMessage(content=input['input'], role='user')
-            messages['input'].append(message)
+            messages = input
         
         # Input as a BaseMessage
         elif isinstance(input, BaseMessage):
