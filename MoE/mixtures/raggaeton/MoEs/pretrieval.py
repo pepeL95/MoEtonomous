@@ -1,20 +1,20 @@
 from MoE.xperts.expert_factory import ExpertFactory
 from MoE.base.expert import Expert
-from MoE.base.router import Router
+from MoE.base.expert.lazy_expert import LazyExpert
 from MoE.config.debug import Debug
-from MoE.base.mixture import MoE
+from MoE.base.mixture.base_mixture import MoE
 
 from typing import List
 
 class PretrievalMoE(MoE):
     '''Modular class for handling the  pre-retrieval step of a non-naive RAG pipeline'''
 
-    def __init__(self, name: str, router: Router, experts: List[Expert], description: str = None, verbose: Debug.Verbosity = Debug.Verbosity.quiet) -> None:
+    def __init__(self, name: str, router: LazyExpert, experts: List[Expert], description: str = None, verbose: Debug.Verbosity = Debug.Verbosity.quiet) -> None:
         super().__init__(name, router, experts, description, verbose)
     
     #########################################################################################################################
 
-    def define_xpert_impl(self, state: MoE.State, xpert: Expert) -> dict:
+    def execute_strategy(self, state: MoE.State, xpert: Expert) -> dict:
         if xpert.name == ExpertFactory.Directory.QueryXtractionXpert:
             return self.run_queryXtractionXpert(state, xpert)
         if xpert.name == ExpertFactory.Directory.HyDExpert:

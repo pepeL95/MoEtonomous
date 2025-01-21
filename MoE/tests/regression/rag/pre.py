@@ -12,7 +12,7 @@ from MoE.mixtures.raggaeton.pretrieval_MoE import PretrievalMoE
 from dev_tools.utils.clifont import print_cli_message
 from MoE.xperts.expert_factory import ExpertFactory
 from MoE.config.debug import Debug
-from MoE.base.router import Router
+from MoE.base.expert.lazy_expert import LazyExpert
 
 from dev_tools.enums.llms import LLMs
 
@@ -24,7 +24,7 @@ class PreRetrievalMoE:
     def get():
         
         # Init experts
-        _router = Router(
+        _router = LazyExpert(
             name='PreRetrievalOrchestrator', 
             description='Orchestrates the RAG experts in the pre-retrieval step in a modular RAG pipeline', 
             agent=RunnableLambda(lambda state: (
@@ -53,7 +53,7 @@ class PreRetrievalMoE:
             router=_router,
             experts=[query_xxpert, hyde_xpert],
             verbose=Debug.Verbosity.low,
-        ).build_MoE()
+        ).build()
         
         return pretrievalMoE
 

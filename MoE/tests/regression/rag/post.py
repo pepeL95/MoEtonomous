@@ -10,7 +10,7 @@ if not os.environ.get('ENV'):
 from MoE.mixtures.raggaeton.postrieval_MoE import PostrievalMoE
 from MoE.xperts.expert_factory import ExpertFactory
 from MoE.config.debug import Debug
-from MoE.base.router import Router
+from MoE.base.expert.lazy_expert import LazyExpert
 
 from dev_tools.enums.cross_encodings import CrossEncodings
 from dev_tools.utils.clifont import print_cli_message
@@ -25,7 +25,7 @@ class PostRetrievalMoE:
     def get():
 
         # Init experts
-        router_ = Router(
+        router_ = LazyExpert(
             name='PostRetrievalOrchestrator',
             description='Orchestrates the RAG experts in the post-retrieval step in a modular RAG pipeline',
             agent=RunnableLambda(lambda input : (
@@ -59,7 +59,7 @@ class PostRetrievalMoE:
                 router=router_,
                 experts=[reranker_xpert, context_xpert],
                 verbose=Debug.Verbosity.low,
-        ).build_MoE()
+        ).build()
 
         return postrievalMoE
         

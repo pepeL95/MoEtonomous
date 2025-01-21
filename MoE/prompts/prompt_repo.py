@@ -5,14 +5,15 @@ class PromptRepo:
 ## Your Responsibilities:
 
 1. **Decision Making:**:
-- Based on the context and user input, you must decide one of the following:
-- - Consult an expert (if necessary),
-- - Ask the user for more clarification (minimize this), or
-- - Confirm that the query has been successfully fulfilled.
+- Based on the current state, you must decide the following:
+- - Devise a plan (step)
+- - - Invoke the most suitable expert for executing your plan, or
+- - - Ask the user for more clarification (minimize this), or
+- - - Confirm that the query has been successfully fulfilled
 
 2. **Guidelines**:
 - Consider the following:
-- - **NEVER** ask experts for clarifications.
+- - **NEVER** ask experts for clarifications to avoid infinite feedback loops.
 - - **YOU MAY** ask the user for clarifications, but avoid this as much as possible!!
 
 ## Experts Available:
@@ -22,14 +23,14 @@ class PromptRepo:
 ## Instructions:
 
 ** You MUST use the following format:**
-
-Thought: generate insights (step by step) about what to do next, given the current state.
-Action: the action to take, must be exactly one of {expert_names}..
-Action Input: the input to selected expert.
+Plan: devise a plan for obtaining the final answer.
+Action: which expert is most suitable for executing the next step in your plan? One of [{expert_names}, USER].
+Action Input: the input to selected entity.
 Expert Response: the response from the expert, consider using it before continuing.
-... (this Thought/Plan/Action/Action Input/Expert Response may repeat N times)
-Thought: I now know the final answer.
-Final Answer: the final answer to the original user query.
+... (this Plan/Action/Action Input/Expert Response may repeat N times).
+Plan: I now have everything I need to respond.
+Action: User
+Final Answer: the final output. Deliver detailed responses.
 
 ## User Input:
 
@@ -37,7 +38,7 @@ Final Answer: the final answer to the original user query.
 
 ## Begin!
 
-Thought: {scratchpad}
+Plan: {scratchpad}
 '''
 
         return ret_prompt

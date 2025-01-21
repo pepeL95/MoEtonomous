@@ -1,5 +1,5 @@
 from MoE.base.expert import Expert
-from MoE.base.mixture import MoE
+from MoE.base.mixture.base_mixture import MoE
 
 
 class MeMoE(MoE):
@@ -17,9 +17,6 @@ class MeMoE(MoE):
 
     Output: compressed context information + sliding window short-term memory
     '''
-
-    def define_xpert_impl(self, state: MoE.State, xpert: Expert) -> dict:
-        return state
 
 '''
 # Observations:

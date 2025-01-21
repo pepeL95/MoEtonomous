@@ -10,7 +10,7 @@ from JB007.base.ephemeral_nlp_agent import EphemeralNLPAgent
 from JB007.base.ephemeral_tool_agent import EphemeralToolAgent
 
 from MoE.base.expert import Expert
-from MoE.base.router import Router
+from MoE.base.expert.lazy_expert import LazyExpert
 from MoE.prompts.prompt_repo import PromptRepo
 
 from RAG.base.cross_encoding_reranker import CrossEncodingReranker
@@ -32,7 +32,7 @@ class ExpertRepo:
                 "You can leverage multiple experts who collaborate to fulfill the user's request."
                 ),
             )
-            router = Router(
+            router = LazyExpert(
                 name=ExpertRepo.Router.__name__,
                 description=ExpertRepo.Router.__doc__,
                 agent=agent,

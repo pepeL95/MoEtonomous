@@ -30,7 +30,7 @@ class ArxivMoERunner:
             router=router,
             experts=[query_xpert, search_xpert, sigma_xpert],
             verbose=Debug.Verbosity.low,
-        ).build_MoE()
+        ).build()
 
         return arxivMoE
 

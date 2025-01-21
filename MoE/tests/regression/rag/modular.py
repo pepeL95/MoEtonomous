@@ -8,7 +8,7 @@ if not os.environ.get('ENV'):
     sys.path.append(os.environ.get('SRC'))
 
 
-from MoE.base.router import Router
+from MoE.base.expert.lazy_expert import LazyExpert
 from MoE.mixtures.raggaeton.modular_MoE import ModularRAGMoE
 from MoE.xperts.expert_factory import ExpertFactory
 from MoE.config.debug import Debug
@@ -26,7 +26,7 @@ class ModularRagMoE:
     @staticmethod
     def get():  
         # Init experts
-        router = Router(
+        router = LazyExpert(
             name='RAGchestrator',
             description=None,
             agent=RunnableLambda(lambda state: (
@@ -53,7 +53,7 @@ class ModularRagMoE:
             experts=[pretrievalMoE, retrievalXpert, postrievalMoE],
             router=router,
             verbose=Debug.Verbosity.low,
-        ).build_MoE()
+        ).build()
 
         return MoE
 
