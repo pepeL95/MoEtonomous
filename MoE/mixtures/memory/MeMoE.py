@@ -18,6 +18,7 @@ class MeMoE(MoE):
     Output: compressed context information + sliding window short-term memory
     '''
 
+
 '''
 # Observations:
 
