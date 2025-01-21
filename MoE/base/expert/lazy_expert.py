@@ -7,10 +7,11 @@ from MoE.base.expert.strategy import Strategy
 
 class LazyExpert(Expert):
     '''Expert that stops generating after a given token'''
-    def __init__(self, description:str, name: str, agent: Agent, strategy:Strategy, stop_tokens:List[str]) -> None:
+    def __init__(self, description:str, name: str, agent: Agent, strategy:Strategy, stop_tokens:List[str]=None) -> None:
         super().__init__(agent=agent, description=description, name=name, strategy=strategy)
-        self._stop_tokens = stop_tokens
-        self.bind()
+        if stop_tokens is not None:
+            self._stop_tokens = stop_tokens
+            self.bind()
     
     #################### NEW GETTERS #####################
     @property
