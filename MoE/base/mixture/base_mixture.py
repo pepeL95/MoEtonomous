@@ -10,7 +10,7 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 
 from MoE.config.debug import Debug
 from MoE.base.expert.base_expert import Expert
-from MoE.base.mixture.strategy import Strategy, DefaultStrategy
+from MoE.base.strategy.mixture.base_strategy import MoEStrategy
 
 from dev_tools.utils.clifont import CLIFont, print_bold
 
@@ -22,23 +22,23 @@ class MoEBuilder:
     def set_name(self, name):
         self.name = name
         return self
-    
+
     def set_description(self, description):
         self.description = description
         return self
-    
+
     def set_router(self, router):
         self.router = router
         return self
-    
+
     def set_experts(self, experts):
         self.experts = experts
         return self
-    
+
     def set_strategy(self, strategy):
         self.strategy = strategy
         return self
-    
+
     def set_verbosity(self, verbosity):
         self.verbosity = verbosity
         return self
@@ -49,13 +49,14 @@ class MoEBuilder:
             description=self.description,
             router=self.router,
             experts=self.experts,
-            strategy=self.strategy or DefaultStrategy(),
+            strategy=self.strategy,
             verbose=self.verbosity,
         ).build()
 
 
 class MoE:
-    FINISH ='__end__'
+    FINISH = '__end__'
+
     class State(TypedDict):
         next: str
         prev: str
@@ -67,14 +68,14 @@ class MoE:
         kwargs: dict
 
     def __init__(
-        self,
-    name:str,
-    router:Expert | Any, #: Expert | MoE
-    experts:List[Expert],
-    description:str,
-    strategy:Strategy,
-    verbose:Debug.Verbosity=Debug.Verbosity.quiet) -> None:
-        self.experts = OrderedDict() # will be {expert_name: expert}
+            self,
+            name: str,
+            router: Expert | Any,  # : Expert | MoE
+            experts: List[Expert],
+            description: str,
+            strategy: MoEStrategy,
+            verbose: Debug.Verbosity = Debug.Verbosity.quiet) -> None:
+        self.experts = OrderedDict()  # will be {expert_name: expert}
         for expert in experts:
             self.experts[expert.name] = expert
         self.name = name
@@ -87,9 +88,10 @@ class MoE:
 
 
 ####################################################### Class Methods #############################################################
-    
+
+
     @classmethod
-    def _extract_router_user_messages(cls, chat_history:ChatMessageHistory):
+    def _extract_router_user_messages(cls, chat_history: ChatMessageHistory):
         '''Sliding window chat history'''
         history = []
         for mssg in chat_history.messages:
@@ -105,13 +107,13 @@ class MoE:
             return second_split[0].strip(), second_split[1].strip()
         else:
             return None, None
-        
+
     @classmethod
     def _parse_final_answer(cls, text):
         first_split = text.split('\nFinal Answer:')
         if first_split:
             return '__end__', first_split[-1].strip()
-    
+
     @classmethod
     def _parse_router_output(cls, text):
         xpert, xpert_input = cls._parse_action_and_input(text)
@@ -121,100 +123,120 @@ class MoE:
         xpert, xpert_input = cls._parse_final_answer(text)
         if all([xpert, xpert_input]):
             return xpert, xpert_input
-        
-        raise ValueError('Neither \'Expert Response\' or \'Final Answer\' was found')
+
+        raise ValueError(
+            'Neither \'Expert Response\' or \'Final Answer\' was found')
 
 ##################################################################################################################################
 
     def _create_router_node(self, state: State):
         # All keys in State are required*
-        required_keys = {'input', 'prev', 'next', 'router_scratchpad', 'expert_output', 'ephemeral_mem'}
-        assert required_keys.issubset(state.keys()), f'You are missing at least one of the following required keys {required_keys}'
+        required_keys = {'input', 'prev', 'next',
+                         'router_scratchpad', 'expert_output', 'ephemeral_mem'}
+        assert required_keys.issubset(state.keys(
+        )), f'You are missing at least one of the following required keys {required_keys}'
 
         # Router is required
         if not self.router:
-            raise ValueError('`self.router` cannot be None. Make sure you initialize it in your specific mixture __init__() method.')
+            raise ValueError(
+                '`self.router` cannot be None. Make sure you initialize it in your specific mixture __init__() method.')
 
         # Router is of valid type
         if not isinstance(self.router, (Expert, MoE)):
-            raise TypeError(f"Router must be an instance of Union[MoE, Expert]. Got {type(self.router)}")
-        
+            raise TypeError(f"Router must be an instance of Union[MoE, Expert]. Got {
+                            type(self.router)}")
+
         # Next state must be valid
         if state['next'] not in self.experts.keys() | {self.router.name, '__end__'}:
-            raise ValueError(f'Next state is not defined in the mixture. Must be one of {self.experts.keys()}, but got {state['next']}')
+            raise ValueError(f'Next state is not defined in the mixture. Must be one of {
+                             self.experts.keys()}, but got {state['next']}')
 
         # Avoid infinite loops
         if state['next'] == state['prev']:
             state['next'] = self.router.name
-        
+
         # If xpert decided where to go next, go there
         if state['next'] != self.router.name:
             return state
 
         # Build scratchpad
         if state["expert_output"]:
-            state["router_scratchpad"] += f"\n{state['prev']} Response: {state["expert_output"]}"
-        
+            state["router_scratchpad"] += f"\n{state['prev']
+                                               } Response: {state["expert_output"]}"
+
         # Call router
         output_map = self.router.execute_strategy({
             # 'chat_history': self._extract_router_user_messages(state['ephemeral_mem']),
             'experts': [f'{expert.name}: {expert.description}' for expert in self.experts.values()],
             'expert_names': [f'{expert}' for expert in self.experts.keys()],
             'input': state['input'],
-            'scratchpad': state["router_scratchpad"], # Prev scratchpad + expert response (if any)
+            # Prev scratchpad + expert response (if any)
+            'scratchpad': state["router_scratchpad"],
             'previous_expert': state['prev']
         })
 
         # Update scratchpad if needed
-        state['router_scratchpad'] = output_map.get('router_scratchpad', state['router_scratchpad']) # Prev scratchpad + expert response (compressed)
+        # Prev scratchpad + expert response (compressed)
+        state['router_scratchpad'] = output_map.get(
+            'router_scratchpad', state['router_scratchpad'])
 
         # Extract expert and expert input
-        xpert_name, xpert_input = self._parse_router_output(output_map.get('expert_output')) # New plan + action + action input
-        
+        output = output_map['expert_output']
+        xpert_name, xpert_input = self._parse_router_output(
+            output)  # New plan + action + action input
+
         # Debug verbosity
         if self.verbose is Debug.Verbosity.low:
-            print_bold(f'Scratchpad: {CLIFont.blue}{state['router_scratchpad']}')
+            print_bold(f'Scratchpad: {CLIFont.blue}{
+                       state['router_scratchpad']}')
             # print_bold(f'Result: {CLIFont.purple}Calling `{xpert_name}` with input `{xpert_input}`\n')
-            
+
         if self.verbose is Debug.Verbosity.high:
-            print_bold(f'Scratchpad: {CLIFont.blue}{state['router_scratchpad']}')
+            print_bold(f'Scratchpad: {CLIFont.blue}{
+                       state['router_scratchpad']}')
             print_bold(f'Output: {CLIFont.blue}{output_map}\n')
-            print_bold(f'Result: {CLIFont.purple}Calling `{xpert_name}` with input `{xpert_input}`\n')
-            
+            print_bold(f'Result: {CLIFont.purple}Calling `{
+                       xpert_name}` with input `{xpert_input}`\n')
+
         # Final answer?
         if xpert_name == '__end__' or xpert_name == 'USER':
             return {"next": '__end__', "expert_output": xpert_input, "router_scratchpad": output_map, "prev": self.router.name}
 
         # Sanity check
         if xpert_name not in self.experts.keys():
-            raise ValueError(f"""`self.router` must return one of {self.experts.keys()}. But got `{xpert_name}` instead.""")
+            raise ValueError(f"""`self.router` must return one of {
+                             self.experts.keys()}. But got `{xpert_name}` instead.""")
 
         # Update state
         state["next"] = xpert_name
         state["expert_input"] = xpert_input
         state["prev"] = self.router.name
-        state["router_scratchpad"] += output_map.get('expert_output')
+        state["router_scratchpad"] += output
 
         return state
-    
-    def _create_expert_node(self, state:State, xpert:Expert) -> dict:
+
+    def _create_expert_node(self, state: State, xpert: Expert) -> dict:
         # The following keys in State are required*
-        required_keys = {'input', 'prev', 'next', 'expert_input', 'expert_output', 'ephemeral_mem', 'kwargs'}
-        assert required_keys.issubset(state.keys()), f'You are missing at least one of the following required keys {required_keys}'
-        
-        update:dict = xpert.execute_strategy(state=state)
-        
-        xpert_in = HumanMessage(content=state['expert_input'], role=state['prev'])
+        required_keys = {'input', 'prev', 'next', 'expert_input',
+                         'expert_output', 'ephemeral_mem', 'kwargs'}
+        assert required_keys.issubset(state.keys(
+        )), f'You are missing at least one of the following required keys {required_keys}'
+
+        update: dict = xpert.execute_strategy(state=state)
+
+        xpert_in = HumanMessage(
+            content=state['expert_input'], role=state['prev'])
         xpert_out = AIMessage(content=update['expert_output'], role=xpert.name)
-        
+
         update['prev'] = xpert.name
         update['ephemeral_mem'].add_messages([xpert_in, xpert_out])
         # Input to expert_(t+1) = expert_t
         update['expert_input'] = update['expert_output']
-        
+
         # Debug verbosity
         if self.verbose > Debug.Verbosity.quiet:
-            print_bold(f'Expert Responded: {CLIFont.light_green}`{state['expert_output']}`{CLIFont.reset}`\n')
+            print_bold(f'Expert Responded: {CLIFont.light_green}`{
+                       state['expert_output']}`{CLIFont.reset}`\n')
             print_bold(f'Next: {CLIFont.purple}Calling `{state['next']}`\n')
 
         return update
@@ -224,15 +246,17 @@ class MoE:
 
     def build(self):
         if not self.router:
-            raise ValueError('gate_keeper cannot be None. Make sure you initialize it in your specific mixture __init__() method.')
-        
+            raise ValueError(
+                'gate_keeper cannot be None. Make sure you initialize it in your specific mixture __init__() method.')
+
         # Define mixture state
         convo_team = StateGraph(MoE.State)
 
         # Add experts
         convo_team.add_node(self.router.name, self._create_router_node)
         for name, xpert in self.experts.items():
-            convo_team.add_node(name, functools.partial(self._create_expert_node, xpert=xpert))
+            convo_team.add_node(name, functools.partial(
+                self._create_expert_node, xpert=xpert))
 
         # Add simple edges
         for expert_name in self.experts:
@@ -240,20 +264,22 @@ class MoE:
 
         # Add conditional edges
         conditional_edges = {'__end__': END}
-        conditional_edges.update({expert_name: expert_name for expert_name in self.experts.keys()})
+        conditional_edges.update(
+            {expert_name: expert_name for expert_name in self.experts.keys()})
         convo_team.add_conditional_edges(
             self.router.name,
-            lambda s : s['next'],
+            lambda s: s['next'],
             conditional_edges
         )
-        
+
         # Build the mixture of experts
         convo_team.set_entry_point(self.router.name)
         self._graph = convo_team.compile()
         return self
 
-    def invoke(self, input:dict):
-        assert 'input' in input, f"Missing required `input` key when invoking {self.name}."
+    def invoke(self, input: dict):
+        assert 'input' in input, f"Missing required `input` key when invoking {
+            self.name}."
 
         # Set up defaults
         input.setdefault("next", self.router.name)
@@ -263,6 +289,6 @@ class MoE:
         input.setdefault("kwargs", {})
         input.setdefault("router_scratchpad", "")
         input.setdefault("ephemeral_mem", ChatMessageHistory())
-        
+
         # Invoke graph
         return self._graph.invoke(input)

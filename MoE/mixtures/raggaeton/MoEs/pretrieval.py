@@ -6,12 +6,13 @@ from MoE.base.mixture.base_mixture import MoE
 
 from typing import List
 
+
 class PretrievalMoE(MoE):
     '''Modular class for handling the  pre-retrieval step of a non-naive RAG pipeline'''
 
     def __init__(self, name: str, router: LazyExpert, experts: List[Expert], description: str = None, verbose: Debug.Verbosity = Debug.Verbosity.quiet) -> None:
         super().__init__(name, router, experts, description, verbose)
-    
+
     #########################################################################################################################
 
     def execute_strategy(self, state: MoE.State, xpert: Expert) -> dict:
@@ -20,17 +21,15 @@ class PretrievalMoE(MoE):
         if xpert.name == ExpertFactory.Directory.HyDExpert:
             return self.run_HyDEXpert(state, xpert)
 
-    
     def run_queryXtractionXpert(self, state: MoE.State, xpert: Expert) -> dict:
         output = xpert.invoke({
-            'input': state['expert_input'], 
+            'input': state['expert_input'],
             'topic': state['kwargs'].get('topic', 'No specific topic, go ahead and imply it as best as you can from the query'),
         })
         state['expert_output'] = "Successfully enhanced the queries."
         state['kwargs']['search_queries'] = output['search_queries']
         state['next'] = ExpertFactory.Directory.HyDExpert
         return state
-    
 
     def run_HyDEXpert(self, state: MoE.State, xpert: Expert) -> dict:
         outputs = []

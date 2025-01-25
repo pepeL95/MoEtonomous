@@ -1,6 +1,8 @@
-from MoE.base.mixture.strategy import Strategy
+from MoE.base.strategy.mixture.base_strategy import MoEStrategy
+from MoE.base.strategy.expert.base_strategy import BaseExpertStrategy
 
-class MoEStrategy(Strategy):
+
+class RouterStrategy(MoEStrategy):
     def execute(self, moe, input):
         return moe.invoke({
             'input': input['input'],
@@ -12,7 +14,8 @@ class MoEStrategy(Strategy):
             },
         })
 
-class GenXpertStategy(Strategy):
+
+class GenXpertStategy(BaseExpertStrategy):
     def execute(self, expert, state):
         output = expert.invoke({
             'input': state['expert_input'],
@@ -22,8 +25,9 @@ class GenXpertStategy(Strategy):
         state['next'] = 'Router'
         state['expert_output'] = output
         return state
-    
-class WebSearchStrategy(Strategy):
+
+
+class WebSearchStrategy(BaseExpertStrategy):
     def execute(self, expert, state):
         output = expert.invoke({
             'input': state['expert_input'],

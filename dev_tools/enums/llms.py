@@ -3,6 +3,7 @@ import os
 from langchain_community.chat_models import ChatLlamaCpp
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+
 class LLMs:
     @staticmethod
     def Phi3():
@@ -17,7 +18,7 @@ class LLMs:
             verbose=False,
         )
         return phi
-    
+
     @staticmethod
     def Phi35():
         phi = ChatLlamaCpp(
@@ -31,7 +32,6 @@ class LLMs:
             verbose=False,
         )
         return phi
-    
 
     @staticmethod
     def Gemma2Plus():
@@ -46,7 +46,7 @@ class LLMs:
             verbose=False,
         )
         return google
-    
+
     @staticmethod
     def Gemma2Mini():
         google = ChatLlamaCpp(
@@ -60,12 +60,13 @@ class LLMs:
             verbose=False,
         )
         return google
-    
+
     @staticmethod
     def Gemini():
-        gemini = ChatGoogleGenerativeAI(model="gemini-1.5-flash-002", temperature=0)
+        gemini = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash-002", temperature=0)
         return gemini
-    
+
     @staticmethod
     def Llama32():
         llama_3dot2 = ChatLlamaCpp(

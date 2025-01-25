@@ -1,24 +1,25 @@
 from MoE.xperts.expert_repo import ExpertRepo
 from langchain_core.language_models import BaseChatModel, BaseLLM
 
+
 class ExpertFactory:
     class Directory:
-        Router:str = 'Router'
-        GeneralKnowledgeExpert:str = 'GeneralKnowledgeExpert'
-        WebSearchExpert:str = 'WebSearchExpert'
-        JiraExpert:str = 'JiraExpert'
-        QueryXtractionXpert:str = 'QueryXtractionXpert'
-        HyDExpert:str = 'HyDExpert'
-        RetrieverExpert:str = 'RetrieverExpert'
-        RerankingExpert:str = 'RerankingExpert'
-        ContextExpert:str = 'ContextExpert'
-        ArxivQbuilderXpert:str = 'ArxivQbuilderXpert'
-        ArxivSearchXpert:str = 'ArxivSearchXpert'
-        ArxivSigmaXpert:str = 'ArxivSigmaXpert'
-        ListPalExpert:str = 'ListPalExpert'
+        Router: str = 'Router'
+        GeneralKnowledgeExpert: str = 'GeneralKnowledgeExpert'
+        WebSearchExpert: str = 'WebSearchExpert'
+        JiraExpert: str = 'JiraExpert'
+        QueryXtractionXpert: str = 'QueryXtractionXpert'
+        HyDExpert: str = 'HyDExpert'
+        RetrieverExpert: str = 'RetrieverExpert'
+        RerankingExpert: str = 'RerankingExpert'
+        ContextExpert: str = 'ContextExpert'
+        ArxivQbuilderXpert: str = 'ArxivQbuilderXpert'
+        ArxivSearchXpert: str = 'ArxivSearchXpert'
+        ArxivSigmaXpert: str = 'ArxivSigmaXpert'
+        ListPalExpert: str = 'ListPalExpert'
 
     @staticmethod
-    def get(xpert:Directory, llm:BaseChatModel | BaseLLM, **kwargs):
+    def get(xpert: Directory, llm: BaseChatModel | BaseLLM, **kwargs):
         if xpert == ExpertFactory.Directory.Router:
             return ExpertRepo.Router.get_router(llm=llm)
         if xpert == ExpertFactory.Directory.GeneralKnowledgeExpert:
@@ -43,4 +44,3 @@ class ExpertFactory:
             return ExpertRepo.Arxiv.SearchXpert.get_expert(llm=llm)
         if xpert == ExpertFactory.Directory.ArxivSigmaXpert:
             return ExpertRepo.Arxiv.SigmaXpert.get_expert(llm=llm)
-

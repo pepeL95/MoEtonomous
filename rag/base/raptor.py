@@ -13,28 +13,30 @@ from sklearn.mixture import GaussianMixture
 
 RANDOM_SEED = 224  # Fixed seed for reproducibility
 
+
 class RAPTOR:
     def __init__(
-            self, 
-            model: BaseLLM, 
-            summarization_prompt: str, 
-            embd: Union[MPNetModel, Embeddings], 
-            tokenizer: MPNetTokenizerFast=None, 
-            device:str = None
-            ) -> None:
-        
+            self,
+            model: BaseLLM,
+            summarization_prompt: str,
+            embd: Union[MPNetModel, Embeddings],
+            tokenizer: MPNetTokenizerFast = None,
+            device: str = None
+    ) -> None:
+
         self.device = device
         if self.device is None:
             if torch.cuda.is_available():
-                self.device = 'cuda'    
+                self.device = 'cuda'
             elif torch.backends.mps.is_available():
                 self.device = 'mps'
             else:
                 self.device = 'cpu'
-        
+
         # Enable gpu (if ready)
         if self.device not in {'cuda', 'mps', 'cpu'}:
-            raise ValueError(f"Device must be one of [cpu, cuda, mps]. Got {self.device}.")
+            raise ValueError(
+                f"Device must be one of [cpu, cuda, mps]. Got {self.device}.")
 
         # Set embedding model and tokenizer(if needed)
         self.tokenizer = tokenizer
@@ -42,11 +44,13 @@ class RAPTOR:
         if isinstance(self.embd, MPNetModel):
             self.embd = embd.to(self.device)
             if self.tokenizer is None:
-                raise ValueError("You must provide a tokenizer for the provided embedding model.")
-        
+                raise ValueError(
+                    "You must provide a tokenizer for the provided embedding model.")
+
         elif not isinstance(self.embd, Embeddings):
-            raise ValueError("The embedding model must be one of Union[MPNetModel, Embeddings]")
-        
+            raise ValueError(
+                "The embedding model must be one of Union[MPNetModel, Embeddings]")
+
         # Set llm and summarization prompt
         self.model = model
         self.summarization_prompt = summarization_prompt
@@ -60,14 +64,14 @@ class RAPTOR:
     ) -> np.ndarray:
         '''
         Perform global dimensionality reduction on the embeddings using UMAP.
-    
+
         Parameters:
         - embeddings: The input embeddings as a numpy array.
         - dim: The target dimensionality for the reduced space.
         - n_neighbors: Optional; the number of neighbors to consider for each point.
                        If not provided, it defaults to the square root of the number of embeddings.
         - metric: The distance metric to use for UMAP.
-    
+
         Returns:
         - A numpy array of the embeddings reduced to the specified dimensionality.
         '''
@@ -83,13 +87,13 @@ class RAPTOR:
     ) -> np.ndarray:
         '''
         Perform local dimensionality reduction on the embeddings using UMAP, typically after global clustering.
-    
+
         Parameters:
         - embeddings: The input embeddings as a numpy array.
         - dim: The target dimensionality for the reduced space.
         - num_neighbors: The number of neighbors to consider for each point.
         - metric: The distance metric to use for UMAP.
-    
+
         Returns:
         - A numpy array of the embeddings reduced to the specified dimensionality.
         '''
@@ -103,12 +107,12 @@ class RAPTOR:
     ) -> int:
         '''
         Determine the optimal number of clusters using the Bayesian Information Criterion (BIC) with a Gaussian Mixture Model.
-    
+
         Parameters:
         - embeddings: The input embeddings as a numpy array.
         - max_clusters: The maximum number of clusters to consider.
         - random_state: Seed for reproducibility.
-    
+
         Returns:
         - An integer representing the optimal number of clusters found.
         '''
@@ -130,12 +134,13 @@ class RAPTOR:
         - embeddings: The input embeddings as a numpy array.
         - threshold: The probability threshold for assigning an embedding to a cluster.
         - random_state: Seed for reproducibility.
-    
+
         Returns:
         - A tuple containing the cluster labels and the number of clusters determined.
         '''
         n_clusters = cls._get_optimal_clusters(embeddings)
-        gm = GaussianMixture(n_components=n_clusters, random_state=random_state)
+        gm = GaussianMixture(n_components=n_clusters,
+                             random_state=random_state)
         gm.fit(embeddings)
         probs = gm.predict_proba(embeddings)
         labels = [np.where(prob > threshold)[0] for prob in probs]
@@ -148,12 +153,12 @@ class RAPTOR:
         '''
         Perform clustering on the embeddings by first reducing their dimensionality globally, then clustering
         using a Gaussian Mixture Model, and finally performing local clustering within each global cluster.
-    
+
         Parameters:
         - embeddings: The input embeddings as a numpy array.
         - dim: The target dimensionality for UMAP reduction.
         - threshold: The probability threshold for assigning an embedding to a cluster in GMM.
-    
+
         Returns:
         - A list of numpy arrays, where each array contains the cluster IDs for each embedding.
         '''
@@ -162,7 +167,8 @@ class RAPTOR:
         if len(embeddings) <= dim + 1:
             return [np.array([0]) for _ in range(len(embeddings))]
 
-        reduced_embeddings_global = cls._global_cluster_embeddings(embeddings, dim)
+        reduced_embeddings_global = cls._global_cluster_embeddings(
+            embeddings, dim)
         global_clusters, n_global_clusters = cls._GMM_cluster(
             reduced_embeddings_global, threshold
         )
@@ -179,7 +185,8 @@ class RAPTOR:
             if len(global_cluster_embeddings_) == 0:
                 continue
             if len(global_cluster_embeddings_) <= dim + 1:
-                local_clusters = [np.array([0]) for _ in global_cluster_embeddings_]
+                local_clusters = [np.array([0])
+                                  for _ in global_cluster_embeddings_]
                 n_local_clusters = 1
             else:
                 reduced_embeddings_local = cls._local_cluster_embeddings(
@@ -209,13 +216,14 @@ class RAPTOR:
         '''    
         Parameters:
         - texts: List[str], a list of text documents to be embedded.
-    
+
         Returns:
         - numpy.ndarray: An array of embeddings for the given text documents.
         '''
         embeddings = None
         if isinstance(self.embd, MPNetModel):
-            inputs = self.tokenizer(texts, return_tensors='pt', padding=True, truncation=True).to(self.device)
+            inputs = self.tokenizer(
+                texts, return_tensors='pt', padding=True, truncation=True).to(self.device)
             with torch.no_grad():
                 outputs = self.embd(**inputs)
             embeddings = outputs.last_hidden_state
@@ -230,21 +238,22 @@ class RAPTOR:
 
         This function combines embedding generation and clustering into a single step. It assumes the existence
         of a previously defined `perform_clustering` function that performs clustering on the embeddings.
-    
+
         Parameters:
         - texts: List[str], a list of text documents to be processed.
-    
+
         Returns:
         - pandas.DataFrame: A DataFrame containing the original texts, their embeddings, and the assigned cluster labels.
         '''
         # Get embeddings as numpy array
         embeddings = self._embed(texts)
         if isinstance(embeddings, torch.Tensor):
-            text_embeddings =  torch.mean(embeddings, dim=1).to('cpu')
+            text_embeddings = torch.mean(embeddings, dim=1).to('cpu')
             text_embeddings_np = np.array(text_embeddings)
             # Cluster labels
-            cluster_labels = self._perform_clustering(text_embeddings_np, 10, 0.1)
-        
+            cluster_labels = self._perform_clustering(
+                text_embeddings_np, 10, 0.1)
+
         # Otherwise, embeddings is already a numpy array
         else:
             # Cluster labels
@@ -252,9 +261,10 @@ class RAPTOR:
 
         df = pd.DataFrame()
         df["text"] = texts
-        df["embd"] = list(embeddings.to('cpu')) if isinstance(embeddings, torch.Tensor) else list(embeddings)
+        df["embd"] = list(embeddings.to('cpu')) if isinstance(
+            embeddings, torch.Tensor) else list(embeddings)
         df["cluster"] = cluster_labels
-        
+
         return df
 
     @staticmethod
@@ -269,11 +279,11 @@ class RAPTOR:
         This method first generates embeddings for the texts,
         clusters them based on similarity, expands the cluster assignments for easier processing, and then summarizes
         the content within each cluster.
-    
+
         Parameters:
         - texts: A list of text documents to be processed.
         - level: An integer parameter that could define the depth or detail of processing.
-    
+
         Returns:
         - Tuple containing two DataFrames:
           1. The first DataFrame (`df_clusters`) includes the original texts, their embeddings, and cluster assignments.
@@ -285,13 +295,14 @@ class RAPTOR:
         for index, row in df_clusters.iterrows():
             for cluster in row["cluster"]:
                 expanded_list.append(
-                    {"text": row["text"], "embd": row["embd"], "cluster": cluster}
+                    {"text": row["text"], "embd": row["embd"],
+                        "cluster": cluster}
                 )
         expanded_df = pd.DataFrame(expanded_list)
         all_clusters = expanded_df["cluster"].unique()
 
         print(f"--Generated {len(all_clusters)} clusters--")
-            
+
         prompt = ChatPromptTemplate.from_template(self.summarization_prompt)
         chain = prompt | self.model | StrOutputParser()
 
@@ -319,14 +330,15 @@ class RAPTOR:
         - texts: List[str], texts to be processed.
         - level: int, current recursion level (starts at 1).
         - n_levels: int, maximum depth of recursion.
-    
+
         Returns:
         - Dict[int, Tuple[pd.DataFrame, pd.DataFrame]], a dictionary where keys are the recursion
           levels and values are tuples containing the clusters DataFrame and summaries DataFrame at that level.
         '''
         results = {}
 
-        df_clusters, df_summary = self._embed_cluster_summarize_texts(texts, level)
+        df_clusters, df_summary = self._embed_cluster_summarize_texts(
+            texts, level)
         results[level] = (df_clusters, df_summary)
 
         unique_clusters = df_summary["cluster"].nunique()
@@ -349,11 +361,12 @@ class RAPTOR:
         for level in sorted(doc_tree.keys()):
             # Extract summaries from the current level's DataFrame
             summaries = doc_tree[level][1]["summaries"].tolist()
-            
+
             # Extend all_texts with the summaries and texts from the current level
-            all_texts = summaries + all_texts # add summaries (actual)
-            all_texts.extend(doc_tree[level][0]['text'].tolist()) # add documents (actual)
-            
+            all_texts = summaries + all_texts  # add summaries (actual)
+            # add documents (actual)
+            all_texts.extend(doc_tree[level][0]['text'].tolist())
+
         all_embeddings = self._embed(all_texts)
-        
+
         return all_texts, all_embeddings

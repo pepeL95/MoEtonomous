@@ -6,33 +6,38 @@ from JB007.base.ephemeral_tool_agent import EphemeralToolAgent
 from MoE.base.mixture.base_mixture import MoEBuilder
 from MoE.base.expert.base_expert import Expert
 from MoE.mixtures.react.experts.factory import ReActDirectory, ReActFactory
-from MoE.mixtures.chat.strategies import GenXpertStategy, WebSearchStrategy, MoEStrategy
+from MoE.mixtures.chat.strategies import GenXpertStategy, WebSearchStrategy, RouterStrategy
 
 from langchain_core.output_parsers import StrOutputParser
 
 from dev_tools.enums.llms import LLMs
+from dev_tools.enums.prompt_parsers import PromptParsers
 
 
 class Router:
     @staticmethod
-    def get(llm):
+    def get():
         return MoEBuilder()\
-        .set_name(Router.__name__)\
-        .set_description('MoE that implements the ReAct framework for LLMs. It thinks, plans, and acts to non-naively fulfill a request.')\
-        .set_router(ReActFactory.get(expert_name=ReActDirectory.Router))\
-        .set_verbosity(Debug.Verbosity.quiet)\
-        .set_strategy(MoEStrategy())\
-        .set_experts([
-            ReActFactory.get(expert_name=ReActDirectory.IntentXtractor), 
-            ReActFactory.get(expert_name=ReActDirectory.PlanningXpert),
-            ReActFactory.get(expert_name=ReActDirectory.SynthesisXpert),
+            .set_name(Router.__name__)\
+            .set_description('MoE that implements the ReAct framework for LLMs. It thinks, plans, and acts to non-naively fulfill a request.')\
+            .set_router(ReActFactory.get(expert_name=ReActDirectory.Router, llm=None))\
+            .set_verbosity(Debug.Verbosity.quiet)\
+            .set_strategy(RouterStrategy())\
+            .set_experts([
+                ReActFactory.get(expert_name=ReActDirectory.IntentXtractor, llm=LLMs.Phi35(
+                ), prompt_parser=PromptParsers.Phi35()),
+                ReActFactory.get(expert_name=ReActDirectory.PlanningXpert, llm=LLMs.Gemini(
+                ), prompt_parser=PromptParsers.Identity()),
+                ReActFactory.get(expert_name=ReActDirectory.SynthesisXpert, llm=LLMs.Phi35(
+                ), prompt_parser=PromptParsers.Phi35()),
             ])\
-        .build()
-    
+            .build()
+
+
 class GenXpert:
     '''Excellent expert on a wide range of topics such as coding, math, history, an much more!!. Default to this expert when not sure which expert to use.'''
     @staticmethod
-    def get(llm) -> Expert:
+    def get(llm, prompt_parser) -> Expert:
         return Expert(
             name=GenXpert.__name__,
             description=GenXpert.__doc__,
@@ -40,6 +45,7 @@ class GenXpert:
             agent=EphemeralNLPAgent(
                 name='GenAgent',
                 llm=llm,
+                prompt_parser=prompt_parser,
                 system_prompt=(
                     "## Instructions\n"
                     "You are a general knowledge expert who thrives in giving accurate information.\n"
@@ -54,11 +60,12 @@ class GenXpert:
             ),
         )
 
+
 class WebSearchXpert:
     '''Excels at searching the web for gathering up-to-date and real-time information.'''
 
     @staticmethod
-    def get(llm) -> Expert:
+    def get(llm, prompt_parser) -> Expert:
         return Expert(
             name=WebSearchXpert.__name__,
             description=WebSearchXpert.__doc__,
@@ -66,6 +73,7 @@ class WebSearchXpert:
             agent=EphemeralToolAgent(
                 name='DuckDuckGoAgent',
                 llm=llm,
+                prompt_parser=prompt_parser,
                 tools=[Toolbox.Websearch.duck_duck_go_tool()],
                 output_parser=StrOutputParser(),
                 system_prompt=(
@@ -78,23 +86,24 @@ class WebSearchXpert:
                     "**Consider the following context (if any):**\n"
                     "{context}\n\n"
                 ),
-            ), 
+            ),
         )
 
+
 class ChatDirectory:
-    Router:str = Router.__name__
-    GenXpert:str = GenXpert.__name__
-    WebSearchXpert:str = WebSearchXpert.__name__
-    
+    Router: str = Router.__name__
+    GenXpert: str = GenXpert.__name__
+    WebSearchXpert: str = WebSearchXpert.__name__
+
 
 class ChatFactory:
     @staticmethod
-    def get(expert_name:str):
+    def get(expert_name: str, llm, prompt_parser=None):
         if expert_name == ChatDirectory.Router:
-            return Router.get(llm=None)
+            return Router.get()
         if expert_name == ChatDirectory.GenXpert:
-            return GenXpert.get(llm=LLMs.Gemini())
+            return GenXpert.get(llm=llm, prompt_parser=prompt_parser)
         if expert_name == ChatDirectory.WebSearchXpert:
-            return WebSearchXpert.get(llm=LLMs.Gemini())
-        
+            return WebSearchXpert.get(llm=llm, prompt_parser=prompt_parser)
+
         raise ValueError(f'No expert by name {expert_name} exists.')

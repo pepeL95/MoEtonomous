@@ -22,14 +22,15 @@ class ExpertRepo:
     class Router:
         '''You are a master at managing conversations between the user and multimple experts. You must autonimously decides where to route inputs/outputs to.'''
         @staticmethod
-        def get_router(llm:BaseChatModel | BaseLLM):
+        def get_router(llm: BaseChatModel | BaseLLM):
             agent = EphemeralNLPAgent(
                 name=ExpertRepo.Router.__name__,
                 llm=llm,
-                prompt_template=PromptRepo.MoE_ReAct(), # template variables: experts, expert_names, input, scratchpad.
+                # template variables: experts, expert_names, input, scratchpad.
+                prompt_template=PromptRepo.MoE_ReAct(),
                 system_prompt=(
-                "You are an assistant managing a conversation with the user.\n"
-                "You can leverage multiple experts who collaborate to fulfill the user's request."
+                    "You are an assistant managing a conversation with the user.\n"
+                    "You can leverage multiple experts who collaborate to fulfill the user's request."
                 ),
             )
             router = LazyExpert(
@@ -38,11 +39,11 @@ class ExpertRepo:
                 agent=agent,
             )
             return router
-        
+
     class GeneralKnowledgeExpert:
         '''Excellent expert on a wide range of topics such as coding, math, history, an much more!!. Default to this expert when not sure which expert to use.'''
         @staticmethod
-        def get_expert(llm:BaseChatModel | BaseLLM) -> Expert:
+        def get_expert(llm: BaseChatModel | BaseLLM) -> Expert:
             chat_agent = EphemeralNLPAgent(
                 name=ExpertRepo.GeneralKnowledgeExpert.__name__,
                 llm=llm,
@@ -64,12 +65,12 @@ class ExpertRepo:
                 description=ExpertRepo.GeneralKnowledgeExpert.__doc__
             )
             return chat_expert
-    
+
     class WebSearchExpert:
         '''Excels at searching the web for gathering up-to-date and real-time information.'''
 
         @staticmethod
-        def get_expert(llm:BaseChatModel | BaseLLM) -> Expert:
+        def get_expert(llm: BaseChatModel | BaseLLM) -> Expert:
             tool_agent = EphemeralToolAgent(
                 name=ExpertRepo.WebSearchExpert.__name__,
                 llm=llm,
@@ -88,16 +89,16 @@ class ExpertRepo:
             )
             realtime_expert = Expert(
                 name=ExpertRepo.WebSearchExpert.__name__,
-                agent=tool_agent, 
+                agent=tool_agent,
                 description=ExpertRepo.WebSearchExpert.__doc__
             )
             return realtime_expert
-    
+
     class JiraExpert:
         '''Excellent at managing all Jira-related actions. Delegate all Jira-related tasks to this expert, it has all the information it needs already.'''
-        
+
         @staticmethod
-        def get_expert(llm:BaseChatModel | BaseLLM) -> Expert:
+        def get_expert(llm: BaseChatModel | BaseLLM) -> Expert:
             jira_expert = EphemeralToolAgent(
                 llm=llm,
                 name=ExpertRepo.JiraExpert.__name__,
@@ -115,17 +116,17 @@ class ExpertRepo:
                     Toolbox.Jira.create_jira_issue,
                     Toolbox.Jira.update_jira_issue,
                     Toolbox.Jira.transition_issue_state,
-                    ],
+                ],
                 output_parser=StrOutputParser(),
                 # verbose=True,
             )
             realtime_expert = Expert(
                 name=ExpertRepo.JiraExpert.__name__,
-                agent=jira_expert, 
+                agent=jira_expert,
                 description=ExpertRepo.JiraExpert.__doc__
             )
             return realtime_expert
-    
+
     class RAG:
         class Indexing:
             pass
@@ -134,14 +135,14 @@ class ExpertRepo:
             class QueryXtractionXpert:
                 '''A search query extraction master. It extracts and decouples queries to optimize information retrieval tasks.'''
 
-                def get_expert(llm:BaseChatModel | BaseLLM) -> Expert:
+                def get_expert(llm: BaseChatModel | BaseLLM) -> Expert:
                     quary_augmentation_agent = EphemeralNLPAgent(
                         llm=llm,
                         name=ExpertRepo.RAG.PreRetrieval.QueryXtractionXpert.__name__,
                         system_prompt=(
                             "You are an expert at optimizing queries, extracting implicit search structures from complex user aiming for efficient information retrieval. "
                             "You thrive at engineering direct queries without adding any unnecessary information"
-                            ),
+                        ),
                         prompt_template=(
                             "### Instructions:\n"
                             "1. Break down compound user queries into distinct single queries, aimed to be individual inputs to an intelligent search agent.\n"
@@ -177,12 +178,12 @@ class ExpertRepo:
                     )
 
                     return query_augmentation_xpert
-            
+
             class HyDExpert:
                 '''Master at generating hypothetical documents to provide better similarity search results in a Retrieval Augmented Generation (RAG) and Information Retrieval (IR) pipeline'''
 
                 @staticmethod
-                def get_expert(llm:BaseChatModel | BaseLLM) -> Expert:
+                def get_expert(llm: BaseChatModel | BaseLLM) -> Expert:
                     hyDEAgent = EphemeralNLPAgent(
                         llm=llm,
                         name=ExpertRepo.RAG.PreRetrieval.HyDExpert.__name__,
@@ -209,20 +210,20 @@ class ExpertRepo:
                             "### Passage:\n"
                         )
                     )
-                    
+
                     hyDExpert = Expert(
                         name=ExpertRepo.RAG.PreRetrieval.HyDExpert.__name__,
-                        agent=hyDEAgent, 
+                        agent=hyDEAgent,
                         description=ExpertRepo.RAG.PreRetrieval.HyDExpert.__doc__
                     )
-                    
+
                     return hyDExpert
-  
+
         class Retrieval:
             class RetrieverExpert:
                 '''Expert at retrieving semantically relevant documents with respect to a given query'''
 
-                def get_expert(retriever:VectorStoreRetriever):
+                def get_expert(retriever: VectorStoreRetriever):
                     retriever_expert = Expert(
                         name=ExpertRepo.RAG.Retrieval.RetrieverExpert.__name__,
                         agent=retriever,
@@ -235,7 +236,7 @@ class ExpertRepo:
             class RerankingExpert:
                 '''A master at ranking the relevance of retrieved documents with respect to a given query. It usually does its work after the RetrieverExpert'''
 
-                def get_expert(reranker:Union[BaseChatModel | BaseLLM, CrossEncodingReranker]):
+                def get_expert(reranker: Union[BaseChatModel | BaseLLM, CrossEncodingReranker]):
                     reranker_expert = Expert(
                         name=ExpertRepo.RAG.PostRetrieval.RerankingExpert.__name__,
                         agent=reranker,
@@ -243,11 +244,11 @@ class ExpertRepo:
                     )
 
                     return reranker_expert
-                
+
             class ContextExpert:
                 '''Master at giving informed answers. It uses a given context to augment its knowledge.'''
 
-                def get_expert(llm:BaseChatModel | BaseLLM) -> Expert:
+                def get_expert(llm: BaseChatModel | BaseLLM) -> Expert:
                     context_agent = EphemeralNLPAgent(
                         llm=llm,
                         name=ExpertRepo.RAG.PostRetrieval.ContextExpert.__name__,
@@ -266,7 +267,7 @@ class ExpertRepo:
                             "### Answer:\n"
                         ),
                     )
-                    
+
                     context_expert = Expert(
                         name=ExpertRepo.RAG.PostRetrieval.ContextExpert.__name__,
                         agent=context_agent,
@@ -274,23 +275,23 @@ class ExpertRepo:
                     )
 
                     return context_expert
-                
+
     class Arxiv:
         class QbuilderXpert:
             '''Dexterous at taking a search query and converting it into a valid JSON format for a downstream search task: searching the Arxiv api for scholar papers.'''
 
-            def get_expert(llm:BaseChatModel | BaseLLM):
+            def get_expert(llm: BaseChatModel | BaseLLM):
                 query_agent = EphemeralNLPAgent(
                     name='ArxivQbuilderAgent',
                     llm=BaseChatModel | BaseLLM.Gemini(),
                     system_prompt=(
                         'You are an dexterous at taking a search query and converting it into a valid format for searching the Arxiv api for scholar papers. '
                         'Consider the user query and follow the instructions thoroughly'
-                        ),
+                    ),
                     prompt_template=Prompters.Arxiv.ApiQueryBuildFewShot(),
                     output_parser=ArxivParser.ApiSearchItems.to_json()
                 )
-                
+
                 query_xpert = Expert(
                     name='ArxivQbuilderXpert',
                     description=ExpertRepo.Arxiv.QbuilderXpert.__doc__,
@@ -298,42 +299,43 @@ class ExpertRepo:
                 )
 
                 return query_xpert
-            
+
         class SearchXpert:
             '''An Arxiv api search expert. It excels at the following task: given a valid JSON query, it executes the query, searching and fetching papers from the Arxiv system.'''
-            def get_expert(llm:BaseChatModel | BaseLLM):
+            def get_expert(llm: BaseChatModel | BaseLLM):
                 search_agent = EphemeralToolAgent(
                     name='ArxivSearchAgent',
                     llm=BaseChatModel | BaseLLM.Gemini(),
                     system_prompt=(
                         'You are a search expert, specialized in searching the Arxiv api for scholar papers.\n'
-                        'Your task is to build a query and then execute it.\n' 
+                        'Your task is to build a query and then execute it.\n'
                         'You have some tools at your disposal, use them wisely, in the right order.'
                     ),
-                    tools=[Toolbox.Arxiv.build_query, Toolbox.Arxiv.execute_query],
+                    tools=[Toolbox.Arxiv.build_query,
+                           Toolbox.Arxiv.execute_query],
                 )
                 search_xpert = Expert(
                     name='ArxivSearchXpert',
                     description=ExpertRepo.Arxiv.SearchXpert.__doc__,
                     agent=search_agent
                 )
-                
+
                 return search_xpert
 
         class SigmaXpert:
             '''An NLP Guru specialized in summarization tasks. Useful expert when we need to synthesize information and provide insights from obtained results.'''
-            def get_expert(llm:BaseChatModel | BaseLLM):
+            def get_expert(llm: BaseChatModel | BaseLLM):
                 sigma_agent = EphemeralNLPAgent(
                     name='ArxivSigmaAgent',
                     system_prompt='You are an nlp expert, specialized in summarization.',
                     prompt_template=Prompters.Arxiv.AbstractSigma(),
                     llm=BaseChatModel | BaseLLM.Gemini(),
                 )
-                
+
                 sigma_xpert = Expert(
                     name='ArxivSigmaXpert',
                     description=ExpertRepo.Arxiv.SigmaXpert.__doc__,
                     agent=sigma_agent
                 )
-                
+
                 return sigma_xpert

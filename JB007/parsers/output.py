@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 from langchain_core.documents import Document
 from langchain_core.output_parsers import JsonOutputParser
 
+
 class StringParser:
     @staticmethod
     def from_langdocs(docs: List[Document]) -> str:
@@ -15,7 +16,7 @@ class StringParser:
         return '\n\n'.join(docs)
 
     @staticmethod
-    def from_array(docs:List[str]):
+    def from_array(docs: List[str]):
         return '\n\n'.join(docs)
 
     @staticmethod
@@ -35,12 +36,13 @@ class StringParser:
         except (SyntaxError, ValueError):
             return []
 
+
 class ArxivParser:
     class ApiSearchItems:
         @staticmethod
         def to_json():
             return JsonOutputParser(pydantic_object=ToolSchemas.Arxiv.ApiSearchItems)
-        
+
     class XML:
         @staticmethod
         def to_dict(xml_string: str) -> dict:
@@ -48,7 +50,7 @@ class ArxivParser:
             root = ET.fromstring(xml_string)
             # Define namespace
             namespace = {"atom": "http://www.w3.org/2005/Atom"}
-            
+
             # Find entries
             entries = root.findall('atom:entry', namespace)
 
@@ -64,5 +66,3 @@ class ArxivParser:
                 }
                 articles.append(article)
             return articles
-
-

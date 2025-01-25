@@ -42,5 +42,3 @@ Plan: {scratchpad}
 '''
 
         return ret_prompt
-
-    
