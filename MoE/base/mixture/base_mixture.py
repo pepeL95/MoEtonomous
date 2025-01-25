@@ -143,13 +143,11 @@ class MoE:
 
         # Router is of valid type
         if not isinstance(self.router, (Expert, MoE)):
-            raise TypeError(f"Router must be an instance of Union[MoE, Expert]. Got {
-                            type(self.router)}")
+            raise TypeError(f"Router must be an instance of Union[MoE, Expert]. Got {type(self.router)}")
 
         # Next state must be valid
         if state['next'] not in self.experts.keys() | {self.router.name, '__end__'}:
-            raise ValueError(f'Next state is not defined in the mixture. Must be one of {
-                             self.experts.keys()}, but got {state['next']}')
+            raise ValueError(f'Next state is not defined in the mixture. Must be one of {self.experts.keys()}, but got {state['next']}')
 
         # Avoid infinite loops
         if state['next'] == state['prev']:
@@ -161,8 +159,7 @@ class MoE:
 
         # Build scratchpad
         if state["expert_output"]:
-            state["router_scratchpad"] += f"\n{state['prev']
-                                               } Response: {state["expert_output"]}"
+            state["router_scratchpad"] += f"\n{state['prev']} Response: {state["expert_output"]}"
 
         # Call router
         output_map = self.router.execute_strategy({
@@ -187,13 +184,11 @@ class MoE:
 
         # Debug verbosity
         if self.verbose is Debug.Verbosity.low:
-            print_bold(f'Scratchpad: {CLIFont.blue}{
-                       state['router_scratchpad']}')
+            print_bold(f'Scratchpad: {CLIFont.blue}{state['router_scratchpad']}')
             # print_bold(f'Result: {CLIFont.purple}Calling `{xpert_name}` with input `{xpert_input}`\n')
 
         if self.verbose is Debug.Verbosity.high:
-            print_bold(f'Scratchpad: {CLIFont.blue}{
-                       state['router_scratchpad']}')
+            print_bold(f'Scratchpad: {CLIFont.blue}{state['router_scratchpad']}')
             print_bold(f'Output: {CLIFont.blue}{output_map}\n')
             print_bold(f'Result: {CLIFont.purple}Calling `{
                        xpert_name}` with input `{xpert_input}`\n')
@@ -222,7 +217,7 @@ class MoE:
         assert required_keys.issubset(state.keys(
         )), f'You are missing at least one of the following required keys {required_keys}'
 
-        update: dict = xpert.execute_strategy(state=state)
+        update: dict = xpert.execute_strategy(state)
 
         xpert_in = HumanMessage(
             content=state['expert_input'], role=state['prev'])

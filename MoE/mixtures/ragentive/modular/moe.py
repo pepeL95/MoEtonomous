@@ -13,6 +13,7 @@ if not os.environ.get('ENV'):
 
 from JB007.config.debug import Debug
 from MoE.base.mixture.base_mixture import MoEBuilder
+from MoE.base.strategy.mixture.default import DefaultMoEStrategy
 from MoE.mixtures.ragentive.modular.experts.factory import RagDirectory, RagFactory
 
 if __name__ == '__main__':
@@ -22,8 +23,10 @@ if __name__ == '__main__':
         .set_description(None)\
         .set_router(RagFactory.get(expert_name=RagDirectory.Router))\
         .set_verbosity(Debug.Verbosity.quiet)\
+        .set_strategy(DefaultMoEStrategy())\
         .set_experts([
             RagFactory.get(expert_name=RagDirectory.PretrievalMoE),
+            RagFactory.get(expert_name=RagDirectory.Retrieval),
             RagFactory.get(expert_name=RagDirectory.PostrievalMoE),
         ])\
         .build()
@@ -32,6 +35,9 @@ if __name__ == '__main__':
     user_input = input('user: ')
     state = modular_rag.invoke({
         'input': user_input,
+        'kwargs': {
+            'topic': 'AWS Lambda'
+        }
     })
 
     print(state['expert_output'])
