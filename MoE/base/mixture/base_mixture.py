@@ -242,7 +242,7 @@ class MoE:
         return update
 
     def execute_strategy(self, input):
-        return self.strategy.execute(self, input=input)
+        return self.strategy.execute(self, state=input)
 
     def build(self):
         if not self.router:
