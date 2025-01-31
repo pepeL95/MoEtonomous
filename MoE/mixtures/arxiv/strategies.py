@@ -15,8 +15,7 @@ class QueryStrategy(BaseExpertStrategy):
     def execute(self, expert, state):
         output = expert.invoke({'input': state['expert_input']})
 
-        state['expert_output'] = 'Successfully built json query: ' + \
-            str(output)
+        state['expert_output'] = 'Successfully built json query: ' + str(output)
         state['kwargs']['apiJson'] = output
         state['next'] = ArxivDirectory.SearchXpert
         return state
