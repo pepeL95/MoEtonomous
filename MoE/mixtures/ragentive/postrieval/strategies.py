@@ -20,9 +20,9 @@ class RerankingStrategy(BaseExpertStrategy):
 
         # Top k documents per query, where k is defined at expert init time
         outputs = set()
-        for _q, docs in zip(state['kwargs']['search_queries'], state['kwargs']['context']):
+        for q_, docs in zip(state['kwargs']['enhanced_queries'], state['kwargs']['context']):
             local_outputs = expert.invoke({
-                'input': _q,
+                'input': q_,
                 'context': docs,
             })
             outputs.update(local_outputs)

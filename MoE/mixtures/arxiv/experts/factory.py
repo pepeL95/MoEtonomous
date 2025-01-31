@@ -10,18 +10,18 @@ class ArxivDirectory:
 
 class ArxivFactory:
     @staticmethod
-    def get(expert_name: str, llm=None, prompt_parser=None):
+    def get(expert_name: str, agent=None):
         # Late import to avoid circular import issue
         from MoE.mixtures.arxiv.strategies import RouterStrategy, QueryStrategy, SearchStrategy, SigmaStrategy
 
         # Factory pattern
         if expert_name == ArxivDirectory.Router:
-            return Router(llm=llm, prompt_parser=prompt_parser, strategy=RouterStrategy())
+            return Router(agent=agent, strategy=RouterStrategy())
         if expert_name == ArxivDirectory.QbuilderXpert:
-            return QbuilderXpert(llm=llm, prompt_parser=prompt_parser, strategy=QueryStrategy())
+            return QbuilderXpert(agent=agent, strategy=QueryStrategy())
         if expert_name == ArxivDirectory.SearchXpert:
-            return SearchXpert(llm=llm, prompt_parser=prompt_parser, strategy=SearchStrategy())
+            return SearchXpert(agent=agent, strategy=SearchStrategy())
         if expert_name == ArxivDirectory.SigmaXpert:
-            return SigmaXpert(llm=llm, prompt_parser=prompt_parser, strategy=SigmaStrategy())
+            return SigmaXpert(agent=agent, strategy=SigmaStrategy())
 
         raise ValueError(f'No expert by name `{expert_name}` exists.')

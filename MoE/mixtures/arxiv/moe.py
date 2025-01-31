@@ -21,16 +21,13 @@ if __name__ == '__main__':
     chat = MoEBuilder()\
         .set_name('ArxivMoE')\
         .set_description(None)\
-        .set_router(ArxivFactory.get(expert_name=ArxivDirectory.Router, llm=None, prompt_parser=None))\
+        .set_router(ArxivFactory.get(expert_name=ArxivDirectory.Router))\
         .set_verbosity(Debug.Verbosity.quiet)\
         .set_experts([
-            ArxivFactory.get(
-                expert_name=ArxivDirectory.QbuilderXpert, llm=LLMs.Gemini()),
-            ArxivFactory.get(
-                expert_name=ArxivDirectory.SearchXpert, llm=LLMs.Gemini()),
-            ArxivFactory.get(
-                expert_name=ArxivDirectory.SigmaXpert, llm=LLMs.Gemini()),
-        ])\
+            ArxivFactory.get(expert_name=ArxivDirectory.QbuilderXpert),
+            ArxivFactory.get(expert_name=ArxivDirectory.SearchXpert),
+            ArxivFactory.get(expert_name=ArxivDirectory.SigmaXpert),
+            ])\
         .build()
 
     # Run

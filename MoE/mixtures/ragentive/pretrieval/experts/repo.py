@@ -4,9 +4,10 @@ from MoE.base.expert.base_expert import Expert
 from langchain_core.runnables import RunnableLambda
 from langchain_core.output_parsers import JsonOutputParser
 
+from dev_tools.enums.llms import LLMs
 
 class Router(Expert):
-    def __init__(self, agent=None, description=None, name=None, strategy=None, llm=None, prompt_parser=None):
+    def __init__(self, agent=None, description=None, name=None, strategy=None):
         super().__init__(
             description=description or Router.__doc__,
             name=name or Router.__name__,
@@ -21,23 +22,19 @@ class Router(Expert):
 class QueryAugmentationExpert(Expert):
     '''A search query extraction master. It extracts and decouples queries to optimize information retrieval tasks.'''
 
-    def __init__(self, agent=None, description=None, name=None, strategy=None, llm=None, prompt_parser=None):
-        if llm is None:
-            raise ValueError('LLM cannot be None')
-
+    def __init__(self, agent=None, description=None, name=None, strategy=None):
         if strategy is None:
             raise ValueError('strategy cannot be None')
-
+        
         super().__init__(
             name=name or QueryAugmentationExpert.__name__,
             description=description or QueryAugmentationExpert.__doc__,
             strategy=strategy,
             agent=agent or EphemeralNLPAgent(
-                llm=llm,
-                prompt_parser=prompt_parser,
+                llm=LLMs.Gemini(),
                 name='QueryAugmentationAgent',
                 system_prompt=(
-                    "You are an expert at optimizing queries, extracting implicit search structures from complex user aiming for efficient information retrieval. "
+                    "You are an expert at optimizing queries, extracting implicit search structures from complex ones aiming for efficient information retrieval. "
                     "You thrive at engineering direct queries without adding any unnecessary information"
                 ),
                 prompt_template=(
@@ -47,18 +44,25 @@ class QueryAugmentationExpert(Expert):
                     "3. Rewrite each query to make it more precise, ensuring it targets the most relevant information.\n"
                     "4. Use the topic provided (if any) for scoping the queries.\n"
                     "5. Provide your reasoning as for why you extracted the given query.\n\n"
-                    " ### Example\n"
+                    "### Example\n"
                     "Topic: Electric Vehicles\n"
-                    "User: Tell me about electric cars, especially the latest models and how they compare to hybrids in terms of fuel efficiency. Be brief\n"
+                    "User: Tell me about electric cars, focus on latest models and how they compare to hybrids in terms of fuel efficiency. Be brief\n"
                     "You: {{\n"
-                    "   \"search_queries\": [\"Give me an overview of electric cars.\", \"What are some of the latest models of electric cars?\", \"Draw a comparison between electric cars and hybrid cars on fuel efficiency.\"],\n"
-                    "   \"reason\": \"There were three implicit queries. Here is what I did to build the queries:\n    1. Identify the first implicit search:  'Give me an overview of electric cars.'\n    2. Identify the second implicit search: 'What are some of the latest models of electric cars?'\n    3. Identify the third implicit search: 'Draw a comparison between electric cars and hybrid cars on fuel efficiency.'\n"
+                    "  \"queries\": [\n"
+                    "    {{\n"
+                    "      \"query\": \"Latest electric vehicle models and their key specifications\",\n"
+                    "      \"reasoning\": \"The user is interested in the latest electric cars, so this query focuses on retrieving up-to-date EV models along with relevant details.\"\n"
+                    "    }},\n"
+                    "    {{\n"
+                    "      \"query\": \"Comparison of electric vehicles and hybrid cars in terms of fuel efficiency\",\n"
+                    "      \"reasoning\": \"The user explicitly requests a comparison between EVs and hybrids regarding fuel efficiency, making this a necessary distinct query.\"\n"
+                    "    }},\n"
+                    "  ]\n"
                     "}}\n\n"
                     "### Output format:\n"
                     "Return a JSON in the following format:\n"
                     "{{\n"
-                    "   \"search_queries\": [\"<query_1>\", ...],\n"
-                    "   \"reason\": \"<your reasoning for decoupling the search queries>\"\n"
+                    "  \"queries\": [{{\"query\": <An enhanced query. Each query is a refined, standalone search input>, \"reasoning\": <A brief reasoning explaining why it was extracted based on the user's request.>}}, ...],\n"
                     "}}\n\n"
                     "### Query:\n"
                     "Topic: {topic}\n"
@@ -74,9 +78,6 @@ class HydeExpert(Expert):
     '''Master at generating hypothetical documents to provide better similarity search results in a Retrieval Augmented Generation (RAG) and Information Retrieval (IR) pipeline'''
 
     def __init__(self, agent=None, description=None, name=None, strategy=None, llm=None, prompt_parser=None):
-        if llm is None:
-            raise ValueError('LLM cannot be None')
-
         if strategy is None:
             raise ValueError('strategy cannot be None')
 
@@ -85,8 +86,7 @@ class HydeExpert(Expert):
             description=description or HydeExpert.__doc__,
             strategy=strategy,
             agent=agent or EphemeralNLPAgent(
-                llm=llm,
-                prompt_parser=prompt_parser,
+                llm=LLMs.Gemini(),
                 name='HydeAgent',
                 system_prompt=(
                     "You thrive in answering every query that is given tou you, always! "

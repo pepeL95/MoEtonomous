@@ -4,6 +4,9 @@ from MoE.base.mixture.base_mixture import MoE
 
 class MeMoE(MoE):
     '''
+    ** RAMBLINGS OF A MADMAN **
+
+    
     Non-trivial memory management
 
     Input: user query

@@ -9,16 +9,16 @@ from MoE.base.mixture.base_mixture import MoE
 from MoE.mixtures.ragentive.postrieval.experts.factory import PostrievalDirectory, PostrievalFactory
 from MoE.mixtures.ragentive.pretrieval.experts.factory import PretrievalDirectory, PretrievalFactory
 
-
 from dev_tools.enums.embeddings import Embeddings
-from dev_tools.enums.llms import LLMs
-from dev_tools.enums.prompt_parsers import PromptParsers
 
 
 class Router(Expert):
     '''Router for a modular, agentive RAG MoE. Decides where to go next.'''
 
-    def __init__(self, agent=None, description=None, name=None, strategy=None, llm=None, prompt_parser=None):
+    def __init__(self, agent=None, description=None, name=None, strategy=None):
+        if strategy is None:
+            raise ValueError("strategy cannot be None")
+        
         super().__init__(
             description=description or Router.__doc__,
             name=name or Router.__name__,
@@ -33,16 +33,16 @@ class Router(Expert):
 class Pretrieval(MoE):
     '''A master at orchestrating the pre-retrieval step of a Retrieval Augmented Generation (RAG) pipeline. It returns a hypothetical answer that must be given to the PostrievalMoE.Use this expert at the beginning of the pipeline.'''
 
-    def __init__(self, name=None, router=None, experts=None, description=None, strategy=None, verbose=Debug.Verbosity.quiet, llm=None, prompt_parser=None):
+    def __init__(self, name=None, router=None, experts=None, description=None, strategy=None, verbose=Debug.Verbosity.quiet):
         if strategy is None:
             raise ValueError("strategy cannot be None")
 
         super().__init__(
             name=name or Pretrieval.__name__,
-            router=router or PretrievalFactory.get(expert_name=PretrievalDirectory.Router, llm=None, prompt_parser=None),
+            router=router or PretrievalFactory.get(expert_name=PretrievalDirectory.Router),
             experts=experts or [
-                PretrievalFactory.get(PretrievalDirectory.QueryAugmentationExpert, llm=LLMs.Gemini(), prompt_parser=PromptParsers.Identity()),
-                PretrievalFactory.get(PretrievalDirectory.HydeExpert, llm=LLMs.Gemini(), prompt_parser=PromptParsers.Identity())
+                PretrievalFactory.get(PretrievalDirectory.QueryAugmentationExpert),
+                PretrievalFactory.get(PretrievalDirectory.HydeExpert)
             ],
             description=description or Pretrieval.__doc__,
             strategy=strategy,
@@ -53,7 +53,7 @@ class Pretrieval(MoE):
 class Retrieval(Expert):
     '''Expert at retrieving semantically relevant documents with respect to a given query'''
         
-    def __init__(self, agent=None, description=None, name=None, strategy=None, llm=None, prompt_parser=None):
+    def __init__(self, agent=None, description=None, name=None, strategy=None):
         if strategy is None:
             raise ValueError('strategy cannot be None')
         
@@ -72,16 +72,16 @@ class Retrieval(Expert):
 class Postrieval(MoE):
     '''Expert at coordinating the post-retrieval step of a Retrieval Augmented Generation (RAG) pipeline. Use this expert when the pre-retrival step is done. You may END after this expert has responded.'''
 
-    def __init__(self, name=None, router=None, experts=None, description=None, strategy=None, verbose=Debug.Verbosity.quiet, llm=None, prompt_parser=None):
+    def __init__(self, name=None, router=None, experts=None, description=None, strategy=None, verbose=Debug.Verbosity.quiet):
         if strategy is None:
             raise ValueError('strategy cannot be None')
         
         super().__init__(
             name=name or Postrieval.__name__,
-            router=router or PostrievalFactory.get(expert_name=PostrievalDirectory.Router, llm=None, prompt_parser=None),
+            router=router or PostrievalFactory.get(expert_name=PostrievalDirectory.Router),
             experts=experts or [
-                PostrievalFactory.get(expert_name=PostrievalDirectory.RerankingExpert, llm=None, prompt_parser=None),
-                PostrievalFactory.get(expert_name=PostrievalDirectory.ContextExpert, llm=LLMs.Gemini(), prompt_parser=PromptParsers.Identity()),    
+                PostrievalFactory.get(expert_name=PostrievalDirectory.RerankingExpert),
+                PostrievalFactory.get(expert_name=PostrievalDirectory.ContextExpert),    
             ],
             description=description or Postrieval.__doc__,
             strategy=strategy,

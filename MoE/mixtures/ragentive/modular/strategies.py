@@ -18,17 +18,17 @@ class PretrievalStrategy(BaseExpertStrategy):
         })
         state['expert_output'] = "Successfully finished the pre-retrieval step of the RAG pipeline."
         state['kwargs']['hyde'] = output['kwargs']['hyde']
-        state['kwargs']['search_queries'] = output['kwargs']['search_queries']
+        state['kwargs']['enhanced_queries'] = output['kwargs']['enhanced_queries']
         state['next'] = RagDirectory.Retrieval
         return state
 
 class RetrievalStrategy(BaseExpertStrategy):
     def execute(self, expert, state):
-        # n-d array with the top 10 documents per search query
+        # 2 dim array with the top 10 documents per search query
         outputs = []
         for _q in state['kwargs']['hyde']:
-            local_outputs = expert.invoke(_q)
-            outputs.append(local_outputs)
+            relevant_docs = expert.invoke(_q)
+            outputs.append(relevant_docs)
 
         state['expert_output'] = 'Successfully retrieved relevant documents.'
         state['kwargs']['context'] = outputs
@@ -39,7 +39,7 @@ class PostrievalStrategy(BaseExpertStrategy):
     def execute(self, expert, state):
         output = expert.invoke({
             'input': state['input'],
-            'kwargs': state['kwargs']
+            'kwargs': state['kwargs'],
         })
         state['expert_output'] = output['expert_output']
         state['next'] = MoE.FINISH

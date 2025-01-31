@@ -10,16 +10,16 @@ class RagDirectory:
 
 class RagFactory:
     @staticmethod
-    def get(expert_name: str, llm=None, prompt_parser=None):
+    def get(expert_name: str, agent=None):
         from MoE.mixtures.ragentive.modular.strategies import PretrievalStrategy, PostrievalStrategy, RetrievalStrategy, RouterStrategy
 
         if expert_name == RagDirectory.Router:
-            return Router(llm=llm, prompt_parser=prompt_parser, strategy=RouterStrategy())
+            return Router(agent=agent, strategy=RouterStrategy())
         if expert_name == RagDirectory.PretrievalMoE:
-            return Pretrieval(llm=llm, prompt_parser=prompt_parser, strategy=PretrievalStrategy()).build()
+            return Pretrieval(strategy=PretrievalStrategy()).build() # MoE
         if expert_name == RagDirectory.Retrieval:
-            return Retrieval(llm=llm, prompt_parser=prompt_parser, strategy=RetrievalStrategy())
+            return Retrieval(agent=agent, strategy=RetrievalStrategy())
         if expert_name == RagDirectory.PostrievalMoE:
-            return Postrieval(llm=llm, prompt_parser=prompt_parser, strategy=PostrievalStrategy()).build()
+            return Postrieval(strategy=PostrievalStrategy()).build() # MoE
 
         raise ValueError(f'No expert by name {expert_name} exists.')

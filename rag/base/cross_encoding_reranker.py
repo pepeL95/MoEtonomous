@@ -32,8 +32,7 @@ class CrossEncodingReranker:
         scores = self.cross_encoder.predict(pairs)
 
         # Apply heuristic
-        scores = [rerank_kwargs.get('score_heuristic')(score)
-                  for score in scores]
+        scores = [rerank_kwargs.get('score_heuristic')(score) for score in scores]
 
         # Sort scores
         ranked_scores_i = np.argsort(scores)[::-1]
@@ -41,7 +40,8 @@ class CrossEncodingReranker:
         # Context is now the most relevant documents to the original user query
         relevant_documents = [
             # Return the top k
-            docs[i] for i in ranked_scores_i[:rerank_kwargs['k']]]
+            docs[i] for i in ranked_scores_i[:rerank_kwargs['k']]
+        ]
 
         # Display results
         if verbose:
@@ -53,8 +53,8 @@ class CrossEncodingReranker:
     def as_reranker(self, rerank_kwargs: dict = {'k': 5, 'score_heuristic': lambda score: score}, verbose=False) -> RunnableLambda:
         # Type check for kwargs
         if not isinstance(rerank_kwargs, dict):
-            raise ValueError(f"rerank_kwargs must be a dict. Got {
-                             type(rerank_kwargs)}.")
-        _reranker = functools.partial(
-            self._computeCrossEncodingReRanking, rerank_kwargs=rerank_kwargs, verbose=verbose)
+            raise ValueError(f"rerank_kwargs must be a dict. Got {type(rerank_kwargs)}.")
+       
+        _reranker = functools.partial(self._computeCrossEncodingReRanking, rerank_kwargs=rerank_kwargs, verbose=verbose)
+       
         return RunnableLambda(_reranker)

@@ -22,11 +22,11 @@ if __name__ == '__main__':
     chat = MoEBuilder()\
         .set_name('ChatMoE')\
         .set_description(None)\
-        .set_router(ChatFactory.get(expert_name=ChatDirectory.Router, llm=None))\
+        .set_router(ChatFactory.get(expert_name=ChatDirectory.Router))\
         .set_verbosity(Debug.Verbosity.quiet)\
         .set_experts([
-            ChatFactory.get(expert_name=ChatDirectory.GenXpert, llm=LLMs.Gemini(), prompt_parser=PromptParsers.Identity()),
-            ChatFactory.get(expert_name=ChatDirectory.WebSearchXpert, llm=LLMs.Gemini(), prompt_parser=PromptParsers.Identity()),
+            ChatFactory.get(expert_name=ChatDirectory.GenXpert),
+            ChatFactory.get(expert_name=ChatDirectory.WebSearchXpert),
         ])\
         .build()
 

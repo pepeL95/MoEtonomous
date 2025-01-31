@@ -1,93 +1,4 @@
-from JB007.config.debug import Debug
-from JB007.toolbox.toolbox import Toolbox
-from JB007.base.ephemeral_nlp_agent import EphemeralNLPAgent
-from JB007.base.ephemeral_tool_agent import EphemeralToolAgent
-
-from MoE.base.mixture.base_mixture import MoEBuilder
-from MoE.base.expert.base_expert import Expert
-from MoE.mixtures.react.experts.factory import ReActDirectory, ReActFactory
-from MoE.mixtures.chat.strategies import GenXpertStategy, WebSearchStrategy, RouterStrategy
-
-from langchain_core.output_parsers import StrOutputParser
-
-from dev_tools.enums.llms import LLMs
-from dev_tools.enums.prompt_parsers import PromptParsers
-
-
-class Router:
-    @staticmethod
-    def get():
-        return MoEBuilder()\
-            .set_name(Router.__name__)\
-            .set_description('MoE that implements the ReAct framework for LLMs. It thinks, plans, and acts to non-naively fulfill a request.')\
-            .set_router(ReActFactory.get(expert_name=ReActDirectory.Router, llm=None))\
-            .set_verbosity(Debug.Verbosity.quiet)\
-            .set_strategy(RouterStrategy())\
-            .set_experts([
-                ReActFactory.get(expert_name=ReActDirectory.IntentXtractor, llm=LLMs.Phi35(
-                ), prompt_parser=PromptParsers.Phi35()),
-                ReActFactory.get(expert_name=ReActDirectory.PlanningXpert, llm=LLMs.Gemini(
-                ), prompt_parser=PromptParsers.Identity()),
-                ReActFactory.get(expert_name=ReActDirectory.SynthesisXpert, llm=LLMs.Phi35(
-                ), prompt_parser=PromptParsers.Phi35()),
-            ])\
-            .build()
-
-
-class GenXpert:
-    '''Excellent expert on a wide range of topics such as coding, math, history, an much more!!. Default to this expert when not sure which expert to use.'''
-    @staticmethod
-    def get(llm, prompt_parser) -> Expert:
-        return Expert(
-            name=GenXpert.__name__,
-            description=GenXpert.__doc__,
-            strategy=GenXpertStategy(),
-            agent=EphemeralNLPAgent(
-                name='GenAgent',
-                llm=llm,
-                prompt_parser=prompt_parser,
-                system_prompt=(
-                    "## Instructions\n"
-                    "You are a general knowledge expert who thrives in giving accurate information.\n"
-                    "You are part of a conversation with other experts who, together, collaborate to fulfill a user request.\n"
-                    "Your input is given from another expert who needs you to answer it.\n"
-                    "You are chosen for a reason! Do not ask for clarifications.\n"
-                    "Respond to your queries with brief, fact-based answers as best as you can\n"
-                    "Format your response nicely, using markdown.\n\n"
-                    "**Consider the following context (if any):**\n"
-                    "{context}\n\n"
-                ),
-            ),
-        )
-
-
-class WebSearchXpert:
-    '''Excels at searching the web for gathering up-to-date and real-time information.'''
-
-    @staticmethod
-    def get(llm, prompt_parser) -> Expert:
-        return Expert(
-            name=WebSearchXpert.__name__,
-            description=WebSearchXpert.__doc__,
-            strategy=WebSearchStrategy(),
-            agent=EphemeralToolAgent(
-                name='DuckDuckGoAgent',
-                llm=llm,
-                prompt_parser=prompt_parser,
-                tools=[Toolbox.Websearch.duck_duck_go_tool()],
-                output_parser=StrOutputParser(),
-                system_prompt=(
-                    "## Instructions\n"
-                    "You are an web search expert who gathers information based in a given query. Use the duck_duck_go_tool provided for searching the web.\n"
-                    "You are part of a conversation with other experts who, together, collaborate to fulfill a request.\n"
-                    "Your input is given from another expert who needs you to answer it.\n"
-                    "You are chosen for a reason! Do not ask for clarifications.\n"
-                    "Before responding, build a **highly detailed synthesis** of the results you obtained, including sources.\n\n"
-                    "**Consider the following context (if any):**\n"
-                    "{context}\n\n"
-                ),
-            ),
-        )
+from MoE.mixtures.chat.experts.repo import Router, GenXpert, WebSearchXpert
 
 
 class ChatDirectory:
@@ -98,12 +9,14 @@ class ChatDirectory:
 
 class ChatFactory:
     @staticmethod
-    def get(expert_name: str, llm, prompt_parser=None):
+    def get(expert_name: str, agent=None):
+        from MoE.mixtures.chat.strategies import GenXpertStategy, WebSearchStrategy, RouterStrategy
+
         if expert_name == ChatDirectory.Router:
-            return Router.get()
+            return Router(strategy=RouterStrategy()).build()  # MoE
         if expert_name == ChatDirectory.GenXpert:
-            return GenXpert.get(llm=llm, prompt_parser=prompt_parser)
+            return GenXpert(agent=agent, strategy=GenXpertStategy())
         if expert_name == ChatDirectory.WebSearchXpert:
-            return WebSearchXpert.get(llm=llm, prompt_parser=prompt_parser)
+            return WebSearchXpert(agent=agent, strategy=WebSearchStrategy())
 
         raise ValueError(f'No expert by name {expert_name} exists.')
