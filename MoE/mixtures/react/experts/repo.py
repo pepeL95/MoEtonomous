@@ -38,7 +38,8 @@ class IntentXtractor(Expert):
             agent=agent or EphemeralNLPAgent(
                 name='IntentXtractionAgent',
                 llm=LLMs.Phi35(),
-                prompt_parser=PromptParsers.Phi35(),
+                prompt_parser=PromptParsers.Identity(),
+                # prompt_parser=PromptParsers.Phi35(),
                 system_prompt=(
                     '## Objective\n'
                     'You are an advanced reasoning expert tasked with generating a concise and insightful synthesis of a given input query. '
@@ -90,7 +91,8 @@ class SynthesisXpert(Expert):
             agent=agent or EphemeralNLPAgent(
                 name='SynthesisAgent',
                 llm=LLMs.Phi35(),
-                prompt_parser=PromptParsers.Phi35(),
+                prompt_parser=PromptParsers.Identity(),
+                # prompt_parser=PromptParsers.Phi35(),
                 prompt_template=(
                     "## Instructions\n"
                     "Generate a one-sentence synthesis of the following. Make sure to include key terms in your synthesis.\n\n"
