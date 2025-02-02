@@ -1,6 +1,6 @@
-from MoE.base.mixture.base_mixture import MoE
-from MoE.base.strategy.expert.base_strategy import BaseExpertStrategy
-from MoE.mixtures.ragentive.pretrieval.experts.factory import PretrievalDirectory
+from moe.base.mixture import BaseMoE
+from moe.base.strategies import BaseExpertStrategy
+from moe.prebuilt.ragentive.pretrieval.experts.factory import PretrievalDirectory
 
 
 class RouterStrategy(BaseExpertStrategy):
@@ -33,5 +33,5 @@ class HydeStrategy(BaseExpertStrategy):
             outputs.append(local_output)
         state['expert_output'] = "Successfully generated hypothetical documents."
         state['kwargs']['hyde'] = outputs
-        state['next'] = MoE.FINISH
+        state['next'] = BaseMoE.FINISH
         return state

@@ -1,4 +1,4 @@
-from MoE.mixtures.ragentive.postrieval.experts.repo import RerankingExpert, ContextExpert, Router
+from moe.prebuilt.ragentive.postrieval.experts.repo import RerankingExpert, ContextExpert, Router
 
 class PostrievalDirectory:
     Router:str = Router.__name__
@@ -8,7 +8,7 @@ class PostrievalDirectory:
 class PostrievalFactory:
     @staticmethod
     def get(expert_name, agent=None):
-        from MoE.mixtures.ragentive.postrieval.strategies import RerankingStrategy, ContextStrategy, RouterStrategy
+        from moe.prebuilt.ragentive.postrieval.strategies import RerankingStrategy, ContextStrategy, RouterStrategy
 
         if expert_name == PostrievalDirectory.Router:
             return Router(agent=agent, strategy=RouterStrategy())

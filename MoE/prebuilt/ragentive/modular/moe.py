@@ -12,9 +12,9 @@ if not os.environ.get('ENV'):
 ###########################################################################
 
 from agents.config.debug import Debug
-from MoE.base.mixture.base_mixture import MoEBuilder
-from MoE.base.strategy.mixture.default import DefaultMoEStrategy
-from MoE.mixtures.ragentive.modular.experts.factory import RagDirectory, RagFactory
+from moe.base.mixture import MoEBuilder
+from moe.default.strategies import DefaultMoEStrategy
+from moe.prebuilt.ragentive.modular.experts.factory import RagDirectory, RagFactory
 
 if __name__ == '__main__':
     # Init Chat MoE

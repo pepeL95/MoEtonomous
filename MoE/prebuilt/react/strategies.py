@@ -1,7 +1,6 @@
-from MoE.base.expert.base_expert import BaseExpert
-from MoE.base.strategy.expert.base_strategy import BaseExpertStrategy
-from MoE.base.mixture.base_mixture import MoE
-
+from moe.base.expert import BaseExpert
+from moe.base.strategies import BaseExpertStrategy
+from moe.base.mixture import BaseMoE
 
 class RouterStrategy(BaseExpertStrategy):
     def execute(self, expert, state):
@@ -12,7 +11,7 @@ class RouterStrategy(BaseExpertStrategy):
 
 
 class IntentXtractStrategy(BaseExpertStrategy):
-    def execute(cls, expert: BaseExpert, state: MoE.State):
+    def execute(cls, expert: BaseExpert, state: BaseMoE.State):
         output = expert.invoke({
             'input': state['expert_input'],
             'context': state['ephemeral_mem'].messages[-5:] or '',
@@ -24,7 +23,7 @@ class IntentXtractStrategy(BaseExpertStrategy):
 
 
 class PlanningStrategy(BaseExpertStrategy):
-    def execute(cls, expert: BaseExpert, state: MoE.State):
+    def execute(cls, expert: BaseExpert, state: BaseMoE.State):
         output = expert.invoke({
             'input': state['expert_input'],
             'experts': state['kwargs']['experts'],
@@ -38,7 +37,7 @@ class PlanningStrategy(BaseExpertStrategy):
 
 
 class SynthesisStrategy(BaseExpertStrategy):
-    def execute(cls, expert: BaseExpert, state: MoE.State):
+    def execute(cls, expert: BaseExpert, state: BaseMoE.State):
         prev_scratchpad, _, prev_xpert_response = state['kwargs']['scratchpad'].rpartition(
             f'{state['kwargs']['previous_expert']} Response: ')
         if prev_scratchpad and prev_xpert_response:
@@ -50,5 +49,5 @@ class SynthesisStrategy(BaseExpertStrategy):
                 compressed_xpert_response
 
         # state['next'] = 'PlanExecutor'
-        state['next'] = MoE.FINISH
+        state['next'] = BaseMoE.FINISH
         return state

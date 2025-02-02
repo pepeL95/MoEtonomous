@@ -1,4 +1,4 @@
-from MoE.mixtures.arxiv.experts.repo import Router, QbuilderXpert, SearchXpert, SigmaXpert
+from moe.prebuilt.arxiv.experts.repo import Router, QbuilderXpert, SearchXpert, SigmaXpert
 
 
 class ArxivDirectory:
@@ -12,7 +12,7 @@ class ArxivFactory:
     @staticmethod
     def get(expert_name: str, agent=None):
         # Late import to avoid circular import issue
-        from MoE.mixtures.arxiv.strategies import RouterStrategy, QueryStrategy, SearchStrategy, SigmaStrategy
+        from moe.prebuilt.arxiv.strategies import RouterStrategy, QueryStrategy, SearchStrategy, SigmaStrategy
 
         # Factory pattern
         if expert_name == ArxivDirectory.Router:

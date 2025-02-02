@@ -13,8 +13,8 @@ if not os.environ.get('ENV'):
 
 from agents.config.debug import Debug
 from dev_tools.enums.llms import LLMs
-from MoE.base.mixture.base_mixture import MoEBuilder
-from MoE.mixtures.arxiv.experts.factory import ArxivDirectory, ArxivFactory
+from moe.base.mixture import MoEBuilder
+from moe.prebuilt.arxiv.experts.factory import ArxivDirectory, ArxivFactory
 
 if __name__ == '__main__':
     # Init Chat MoE

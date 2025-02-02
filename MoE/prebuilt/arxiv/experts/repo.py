@@ -8,7 +8,7 @@ from agents.prebuilt.ephemeral_tool_agent import EphemeralToolAgent
 
 from dev_tools.enums.llms import LLMs
 
-from MoE.base.expert.base_expert import BaseExpert
+from moe.base.expert import BaseExpert
 
 class Router(BaseExpert):
     '''Router for Arxiv MoE. Decides where to go next.'''

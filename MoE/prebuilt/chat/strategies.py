@@ -1,8 +1,6 @@
-from MoE.base.strategy.mixture.base_strategy import MoEStrategy
-from MoE.base.strategy.expert.base_strategy import BaseExpertStrategy
+from moe.base.strategies import BaseMoEStrategy, BaseExpertStrategy
 
-
-class RouterStrategy(MoEStrategy):
+class RouterStrategy(BaseMoEStrategy):
     def execute(self, moe, input):
         return moe.invoke({
             'input': input['input'],

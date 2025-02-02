@@ -4,10 +4,10 @@ from langchain_core.runnables import RunnableLambda
 
 from agents.config.debug import Debug
 
-from MoE.base.expert.base_expert import BaseExpert
-from MoE.base.mixture.base_mixture import MoE
-from MoE.mixtures.ragentive.postrieval.experts.factory import PostrievalDirectory, PostrievalFactory
-from MoE.mixtures.ragentive.pretrieval.experts.factory import PretrievalDirectory, PretrievalFactory
+from moe.base.expert import BaseExpert
+from moe.base.mixture import BaseMoE
+from moe.prebuilt.ragentive.postrieval.experts.factory import PostrievalDirectory, PostrievalFactory
+from moe.prebuilt.ragentive.pretrieval.experts.factory import PretrievalDirectory, PretrievalFactory
 
 from dev_tools.enums.embeddings import Embeddings
 
@@ -30,7 +30,7 @@ class Router(BaseExpert):
         )
 
 
-class Pretrieval(MoE):
+class Pretrieval(BaseMoE):
     '''A master at orchestrating the pre-retrieval step of a Retrieval Augmented Generation (RAG) pipeline. It returns a hypothetical answer that must be given to the PostrievalMoE.Use this expert at the beginning of the pipeline.'''
 
     def __init__(self, name=None, router=None, experts=None, description=None, strategy=None, verbose=Debug.Verbosity.quiet):
@@ -69,7 +69,7 @@ class Retrieval(BaseExpert):
         )
 
 
-class Postrieval(MoE):
+class Postrieval(BaseMoE):
     '''Expert at coordinating the post-retrieval step of a Retrieval Augmented Generation (RAG) pipeline. Use this expert when the pre-retrival step is done. You may END after this expert has responded.'''
 
     def __init__(self, name=None, router=None, experts=None, description=None, strategy=None, verbose=Debug.Verbosity.quiet):

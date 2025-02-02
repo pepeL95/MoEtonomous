@@ -1,4 +1,4 @@
-from MoE.mixtures.ragentive.pretrieval.experts.repo import QueryAugmentationExpert, HydeExpert, Router
+from moe.prebuilt.ragentive.pretrieval.experts.repo import QueryAugmentationExpert, HydeExpert, Router
 
 class PretrievalDirectory:
     Router:str = Router.__name__
@@ -8,7 +8,7 @@ class PretrievalDirectory:
 class PretrievalFactory:
     @staticmethod
     def get(expert_name, agent=None):
-        from MoE.mixtures.ragentive.pretrieval.strategies import QueryAugmentationStrategy, HydeStrategy, RouterStrategy
+        from moe.prebuilt.ragentive.pretrieval.strategies import QueryAugmentationStrategy, HydeStrategy, RouterStrategy
         
         if expert_name == PretrievalDirectory.Router:
             return Router(agent=agent, strategy=RouterStrategy())

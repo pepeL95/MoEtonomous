@@ -12,8 +12,8 @@ if not os.environ.get('ENV'):
 ###########################################################################
 
 from agents.config.debug import Debug
-from MoE.base.mixture.base_mixture import MoEBuilder
-from MoE.mixtures.chat.experts.factory import ChatFactory, ChatDirectory
+from moe.base.mixture import MoEBuilder
+from moe.prebuilt.chat.experts.factory import ChatFactory, ChatDirectory
 
 if __name__ == '__main__':
     # Init Chat MoE

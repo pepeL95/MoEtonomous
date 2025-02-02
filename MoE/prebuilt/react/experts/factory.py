@@ -1,4 +1,4 @@
-from MoE.mixtures.react.experts.repo import Router, IntentXtractor, PlanningXpert, SynthesisXpert
+from moe.prebuilt.react.experts.repo import Router, IntentXtractor, PlanningXpert, SynthesisXpert
 
 
 class ReActDirectory:
@@ -12,7 +12,7 @@ class ReActDirectory:
 class ReActFactory:
     @staticmethod
     def get(expert_name: str, agent=None):
-        from MoE.mixtures.react.strategies import PlanningStrategy, SynthesisStrategy, IntentXtractStrategy, RouterStrategy
+        from moe.prebuilt.react.strategies import PlanningStrategy, SynthesisStrategy, IntentXtractStrategy, RouterStrategy
         
         if expert_name == ReActDirectory.Router:
             return Router(strategy=RouterStrategy())

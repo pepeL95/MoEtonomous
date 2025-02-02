@@ -1,8 +1,7 @@
-from agents.base.ephemeral_nlp_agent import EphemeralNLPAgent
+from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 
-from MoE.base.expert.base_expert import BaseExpert
-from MoE.prompts.prompt_repo import PromptRepo
-from MoE.base.expert.lazy_expert import LazyExpert
+from moe.base.expert import BaseExpert
+from moe.prompts.prompt_repo import PromptRepo
 
 from langchain_core.runnables import RunnableLambda
 
@@ -55,7 +54,7 @@ class IntentXtractor(BaseExpert):
         )
 
 
-class PlanningXpert(LazyExpert):
+class PlanningXpert(BaseExpert):
     def __init__(self, agent=None, description=None, name=None, strategy=None):
         if strategy is None:
             raise ValueError('strategy cannot be None')
@@ -66,7 +65,7 @@ class PlanningXpert(LazyExpert):
             strategy=strategy,
             agent=agent or EphemeralNLPAgent(
                 name='PlanningAgent',
-                llm=LLMs.Gemini(),
+                llm=LLMs.Gemini().bind(stop=["\nExpert Response:"]),
                 prompt_parser=PromptParsers.Identity(),
                 prompt_template=PromptRepo.MoE_ReAct(),
                 system_prompt=(

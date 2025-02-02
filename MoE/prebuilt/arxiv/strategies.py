@@ -1,18 +1,18 @@
 from agents.parsers.output import StringParser
-from MoE.base.mixture.base_mixture import MoE
-from MoE.base.strategy.expert.base_strategy import BaseExpertStrategy
-from MoE.mixtures.arxiv.experts.factory import ArxivDirectory
+from moe.base.mixture import BaseMoE
+from moe.base.strategies import BaseExpertStrategy
+from moe.prebuilt.arxiv.experts.factory import ArxivDirectory
 
 
 class RouterStrategy(BaseExpertStrategy):
-    def execute(self, expert, state:MoE.State):
+    def execute(self, expert, state:BaseMoE.State):
         output = expert.invoke(state)
         state = {'expert_output': output}
         return state
 
 
 class QueryStrategy(BaseExpertStrategy):
-    def execute(self, expert, state:MoE.State):
+    def execute(self, expert, state:BaseMoE.State):
         output = expert.invoke({'input': state['expert_input']})
 
         state['expert_output'] = 'Successfully built json query: ' + str(output)
@@ -22,7 +22,7 @@ class QueryStrategy(BaseExpertStrategy):
 
 
 class SearchStrategy(BaseExpertStrategy):
-    def execute(self, expert, state:MoE.State):
+    def execute(self, expert, state:BaseMoE.State):
         output = expert.invoke({'input': state['kwargs']['apiJson']})
 
         state['expert_output'] = 'Successfully fetched papers from Arxiv.'
@@ -32,12 +32,12 @@ class SearchStrategy(BaseExpertStrategy):
 
 
 class SigmaStrategy(BaseExpertStrategy):
-    def execute(self, expert, state:MoE.State):
+    def execute(self, expert, state:BaseMoE.State):
         outputs = []
         for paper in state['kwargs']['papers']:
             output = expert.invoke({'input': paper})
             outputs.append(output)
 
         state['expert_output'] = StringParser.from_array(outputs)
-        state['next'] = MoE.FINISH
+        state['next'] = BaseMoE.FINISH
         return state

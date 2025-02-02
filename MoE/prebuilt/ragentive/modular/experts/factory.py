@@ -1,4 +1,4 @@
-from MoE.mixtures.ragentive.modular.experts.repo import Pretrieval, Retrieval, Postrieval, Router
+from moe.prebuilt.ragentive.modular.experts.repo import Pretrieval, Retrieval, Postrieval, Router
 
 
 class RagDirectory:
@@ -11,7 +11,7 @@ class RagDirectory:
 class RagFactory:
     @staticmethod
     def get(expert_name: str, agent=None):
-        from MoE.mixtures.ragentive.modular.strategies import PretrievalStrategy, PostrievalStrategy, RetrievalStrategy, RouterStrategy
+        from moe.prebuilt.ragentive.modular.strategies import PretrievalStrategy, PostrievalStrategy, RetrievalStrategy, RouterStrategy
 
         if expert_name == RagDirectory.Router:
             return Router(agent=agent, strategy=RouterStrategy())

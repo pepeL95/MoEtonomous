@@ -16,9 +16,9 @@ if not os.environ.get('ENV'):
 
 from agents.config.debug import Debug
 from dev_tools.enums.llms import LLMs
-from MoE.base.mixture.base_mixture import MoEBuilder
+from moe.base.mixture import MoEBuilder
 from dev_tools.enums.prompt_parsers import PromptParsers
-from MoE.mixtures.react.experts.factory import ReActFactory, ReActDirectory
+from moe.prebuilt.react.experts.factory import ReActFactory, ReActDirectory
 
 
 if __name__ == '__main__':

@@ -1,11 +1,11 @@
 from agents.config.debug import Debug
 from agents.toolbox.toolbox import Toolbox
-from agents.base.ephemeral_nlp_agent import EphemeralNLPAgent
-from agents.base.ephemeral_tool_agent import EphemeralToolAgent
+from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
+from agents.prebuilt.ephemeral_tool_agent import EphemeralToolAgent
 
-from MoE.base.mixture.base_mixture import MoE
-from MoE.base.expert.base_expert import BaseExpert
-from MoE.mixtures.react.experts.factory import ReActDirectory, ReActFactory
+from moe.base.mixture import BaseMoE
+from moe.base.expert import BaseExpert
+from moe.prebuilt.react.experts.factory import ReActDirectory, ReActFactory
 
 
 from langchain_core.output_parsers import StrOutputParser
@@ -14,7 +14,7 @@ from dev_tools.enums.llms import LLMs
 from dev_tools.enums.prompt_parsers import PromptParsers
 
 
-class Router(MoE):
+class Router(BaseMoE):
     '''MoE that implements the ReAct framework for LLMs. It thinks, plans, and acts to non-naively fulfill a request.'''
 
     def __init__(self, name=None, router=None, experts=None, description=None, strategy=None, verbose=Debug.Verbosity.quiet):

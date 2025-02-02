@@ -19,7 +19,3 @@ class BaseExpert:
 
     def execute_strategy(self, state):
         return self.strategy.execute(expert=self, state=state)
-
-__all__ = '''
-BaseExpert
-'''

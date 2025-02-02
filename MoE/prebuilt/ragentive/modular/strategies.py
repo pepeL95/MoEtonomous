@@ -1,6 +1,6 @@
-from MoE.base.mixture.base_mixture import MoE
-from MoE.mixtures.ragentive.modular.experts.factory import RagDirectory
-from MoE.base.strategy.expert.base_strategy import BaseExpertStrategy
+from moe.base.mixture import BaseMoE
+from moe.prebuilt.ragentive.modular.experts.factory import RagDirectory
+from moe.base.strategies import BaseExpertStrategy
 
 
 class RouterStrategy(BaseExpertStrategy):
@@ -42,5 +42,5 @@ class PostrievalStrategy(BaseExpertStrategy):
             'kwargs': state['kwargs'],
         })
         state['expert_output'] = output['expert_output']
-        state['next'] = MoE.FINISH
+        state['next'] = BaseMoE.FINISH
         return state

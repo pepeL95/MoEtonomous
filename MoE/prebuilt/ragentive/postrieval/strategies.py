@@ -1,10 +1,10 @@
 from typing import Any
 
-from MoE.base.mixture.base_mixture import MoE
-from MoE.base.strategy.expert.base_strategy import BaseExpertStrategy
+from moe.base.mixture import BaseMoE
+from moe.base.strategies import BaseExpertStrategy
 
 from agents.parsers.output import StringParser
-from MoE.mixtures.ragentive.postrieval.experts.factory import PostrievalDirectory
+from moe.prebuilt.ragentive.postrieval.experts.factory import PostrievalDirectory
 
 
 class RouterStrategy(BaseExpertStrategy):
@@ -42,5 +42,5 @@ class ContextStrategy(BaseExpertStrategy):
         })
 
         state['expert_output'] = output
-        state['next'] = MoE.FINISH
+        state['next'] = BaseMoE.FINISH
         return state

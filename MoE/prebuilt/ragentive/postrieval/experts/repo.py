@@ -1,5 +1,5 @@
-from agents.base.ephemeral_nlp_agent import EphemeralNLPAgent
-from MoE.base.expert.base_expert import BaseExpert
+from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
+from moe.base.expert import BaseExpert
 from RAG.postrieval.cross_encoding_reranker import CrossEncodingReranker
 from dev_tools.enums.cross_encodings import CrossEncodings
 
