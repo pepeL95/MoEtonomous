@@ -1,5 +1,5 @@
-from JB007.config.debug import Debug
-from JB007.parsers.prompt import BasePromptParser
+from agents.config.debug import Debug
+from agents.parsers.prompt import BasePromptParser
 
 from dev_tools.utils.clifont import CLIFont
 

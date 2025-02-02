@@ -174,8 +174,8 @@ class LLMs(Enum):
     Gemma2Mini = Gemma2Mini
     Llama32 = Llama32
     
+    
     def __call__(self):
         return self.value().model
-    
     
     
