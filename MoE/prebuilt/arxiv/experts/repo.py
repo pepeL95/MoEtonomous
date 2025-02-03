@@ -1,7 +1,7 @@
 from langchain_core.runnables import RunnableLambda
 
-from agents.toolbox.toolbox import Toolbox
-from agents.parsers.output import ArxivParser
+from agents.tools.toolbox import Arxiv
+from agents.parsers.generic import ArxivParser
 from dev_tools.enums.prompts import AgentPrompts
 from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 from agents.prebuilt.ephemeral_tool_agent import EphemeralToolAgent
@@ -66,7 +66,7 @@ class SearchXpert(BaseExpert):
             agent=agent or EphemeralToolAgent(
                 name='ArxivSearchAgent',
                 llm=LLMs.Gemini(),
-                tools=[Toolbox.Arxiv.build_query, Toolbox.Arxiv.execute_query],
+                tools=[Arxiv.build_query, Arxiv.execute_query],
                 system_prompt=(
                     'You are a search expert, specialized in searching the Arxiv api for scholar papers.\n'
                     'Your task is to build a query and then execute it.\n'

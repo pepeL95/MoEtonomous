@@ -1,5 +1,5 @@
 from agents.config.debug import Debug
-from agents.toolbox.toolbox import Toolbox
+from agents.tools.toolbox import Websearch
 from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 from agents.prebuilt.ephemeral_tool_agent import EphemeralToolAgent
 
@@ -36,7 +36,7 @@ class Router(BaseMoE):
 
 
 class GenXpert(BaseExpert):
-    '''Excellent expert on a wide range of topics such as coding, math, history, an much more!!. Default to this expert when not sure which expert to use.'''
+    '''Excellent expert on a wide range of topics. Default to this expert when not sure which expert to use.'''
 
     def __init__(self, agent=None, description=None, name=None, strategy=None):
         if strategy is None:
@@ -80,7 +80,7 @@ class WebSearchXpert(BaseExpert):
                 name='DuckDuckGoAgent',
                 llm=LLMs.Gemini(),
                 prompt_parser=PromptParsers.Identity(),
-                tools=[Toolbox.Websearch.duck_duck_go_tool()],
+                tools=[Websearch.duck_duck_go_tool()],
                 output_parser=StrOutputParser(),
                 system_prompt=(
                     "## Instructions\n"

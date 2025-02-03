@@ -1,7 +1,8 @@
 from typing import List
 
 from agents.base.agent import BaseAgent
-from agents.parsers.prompt import BasePromptParser, IdentityPromptParser
+from agents.parsers.base.prompt_parser import BasePromptParser
+from agents.parsers.default.prompt_parser import DefaultPromptParser
 
 from langchain_core.tools import BaseTool
 from langchain_core.messages import BaseMessage
@@ -24,7 +25,7 @@ class EphemeralToolAgent(BaseAgent):
             system_prompt: str = None,
             prompt_template: str = None,
             verbose: bool = False,
-            prompt_parser: BasePromptParser = IdentityPromptParser(),
+            prompt_parser: BasePromptParser = DefaultPromptParser(),
             output_parser: BaseOutputParser = None,
             is_silent_caller: bool = True
     ) -> None:
@@ -48,7 +49,7 @@ class EphemeralToolAgent(BaseAgent):
 
         # To parse, or not to parse, that is the question
         if self._prompt_parser is None:
-            self.prompt_parser = IdentityPromptParser()
+            self.prompt_parser = DefaultPromptParser()
 
         if self._output_parser is None:
             self.output_parser = RunnablePassthrough()

@@ -29,12 +29,9 @@ if __name__ == '__main__':
         .set_router(ReActFactory.get(expert_name=ReActDirectory.Router))\
         .set_verbosity(Debug.Verbosity.low)\
         .set_experts([
-            ReActFactory.get(expert_name=ReActDirectory.IntentXtractor,
-                             llm=LLMs.Phi35(), prompt_parser=PromptParsers.Phi35()),
-            ReActFactory.get(expert_name=ReActDirectory.PlanningXpert, llm=LLMs.Gemini(
-            ), prompt_parser=PromptParsers.Identity()),
-            ReActFactory.get(expert_name=ReActDirectory.SynthesisXpert,
-                             llm=LLMs.Phi35(), prompt_parser=PromptParsers.Phi35()),
+            ReActFactory.get(expert_name=ReActDirectory.IntentXtractor),
+            ReActFactory.get(expert_name=ReActDirectory.PlanningXpert),
+            ReActFactory.get(expert_name=ReActDirectory.SynthesisXpert),
         ])\
         .build()
 

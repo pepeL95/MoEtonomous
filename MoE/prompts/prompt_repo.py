@@ -30,7 +30,7 @@ Expert Response: the response from the expert, consider using it before continui
 ... (this Plan/Action/Action Input/Expert Response may repeat N times).
 Plan: I now have everything I need to respond.
 Action: User
-Final Answer: the final output. Deliver detailed responses.
+Final Answer: the final output. Deliver detailed responses. Make sure your response is directed to the user!
 
 ## User Input:
 

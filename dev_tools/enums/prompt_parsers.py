@@ -1,5 +1,5 @@
 from agents.config.debug import Debug
-from agents.parsers.prompt import BasePromptParser
+from agents.parsers.base.prompt_parser import BasePromptParser
 
 from dev_tools.utils.clifont import CLIFont
 

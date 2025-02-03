@@ -1,5 +1,6 @@
 from agents.base.agent import BaseAgent
-from agents.parsers.prompt import IdentityPromptParser, BasePromptParser
+from agents.parsers.base.prompt_parser import BasePromptParser
+from agents.parsers.default.prompt_parser import DefaultPromptParser
 
 from typing import Union, List
 
@@ -11,6 +12,7 @@ from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, PromptTemplate, SystemMessagePromptTemplate
 
 
+
 class EphemeralNLPAgent(BaseAgent):
     '''Multimodal conversational agent without memory.'''
 
@@ -20,7 +22,7 @@ class EphemeralNLPAgent(BaseAgent):
             llm: BaseLLM | BaseChatModel,
             system_prompt: str = None,
             prompt_template: Union[str, List[dict]] = None,
-            prompt_parser: BasePromptParser = IdentityPromptParser(),
+            prompt_parser: BasePromptParser = DefaultPromptParser(),
             output_parser: BaseOutputParser = StrOutputParser()
     ) -> None:
 
@@ -41,7 +43,7 @@ class EphemeralNLPAgent(BaseAgent):
 
         # To parse, or not to parse, that is the question
         if self._prompt_parser is None:
-            self.prompt_parser = IdentityPromptParser()
+            self.prompt_parser = DefaultPromptParser()
 
         if self._output_parser is None:
             self._output_parser = RunnablePassthrough()

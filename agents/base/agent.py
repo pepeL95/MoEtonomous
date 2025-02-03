@@ -7,8 +7,8 @@ from langchain_core.runnables import Runnable, RunnableConfig, RunnableBinding
 from langchain_core.language_models import BaseLLM, BaseChatModel
 from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
 
-from agents.parsers.prompt import BasePromptParser, IdentityPromptParser
-
+from agents.parsers.base.prompt_parser import BasePromptParser
+from agents.parsers.default.prompt_parser import DefaultPromptParser
 
 class BaseAgent(Runnable):
     """Abstract class that offers a basic interface for specific agents"""
@@ -19,7 +19,7 @@ class BaseAgent(Runnable):
         llm: BaseLLM | BaseChatModel = None,
         system_prompt: str = None,
         prompt_template: str = None,
-        prompt_parser: BasePromptParser = IdentityPromptParser(),
+        prompt_parser: BasePromptParser = DefaultPromptParser(),
         output_parser: BaseOutputParser | Runnable = StrOutputParser()
     ) -> None:
 

@@ -174,24 +174,16 @@ class BaseMoE:
 
         # Update scratchpad if needed
         # Prev scratchpad + expert response (compressed)
-        state['router_scratchpad'] = output_map.get(
-            'router_scratchpad', state['router_scratchpad'])
+        state['router_scratchpad'] = output_map.get('router_scratchpad', state['router_scratchpad'])
 
         # Extract expert and expert input
         output = output_map['expert_output']
-        xpert_name, xpert_input = self._parse_router_output(
-            output)  # New plan + action + action input
+        xpert_name, xpert_input = self._parse_router_output(output)  # New plan + action + action input
 
         # Debug verbosity
-        if self.verbose is Debug.Verbosity.low:
-            print_bold(f'Scratchpad: {CLIFont.blue}{state['router_scratchpad']}')
-            # print_bold(f'Result: {CLIFont.purple}Calling `{xpert_name}` with input `{xpert_input}`\n')
-
         if self.verbose is Debug.Verbosity.high:
             print_bold(f'Scratchpad: {CLIFont.blue}{state['router_scratchpad']}')
             print_bold(f'Output: {CLIFont.blue}{output_map}\n')
-            print_bold(f'Result: {CLIFont.purple}Calling `{
-                       xpert_name}` with input `{xpert_input}`\n')
 
         # Final answer?
         if xpert_name == '__end__' or xpert_name == 'USER':
@@ -206,21 +198,21 @@ class BaseMoE:
         state["next"] = xpert_name
         state["expert_input"] = xpert_input
         state["prev"] = self.router.name
-        state["router_scratchpad"] += output
+        state["router_scratchpad"] += f'\n{output}'
 
         return state
 
     def _create_expert_node(self, state: State, xpert: BaseExpert) -> dict:
         # The following keys in State are required*
-        required_keys = {'input', 'prev', 'next', 'expert_input',
-                         'expert_output', 'ephemeral_mem', 'kwargs'}
-        assert required_keys.issubset(state.keys(
-        )), f'You are missing at least one of the following required keys {required_keys}'
+        required_keys = {'input', 'prev', 'next', 'expert_input', 'expert_output', 'ephemeral_mem', 'kwargs'}
+        assert required_keys.issubset(state.keys()), f'You are missing at least one of the following required keys {required_keys}'
+
+        if self.verbose > Debug.Verbosity.quiet:
+            print_bold(f'Result: {CLIFont.purple}Calling `{xpert.name}` with input `{state['expert_input']}`\n')
 
         update: dict = xpert.execute_strategy(state)
 
-        xpert_in = HumanMessage(
-            content=state['expert_input'], role=state['prev'])
+        xpert_in = HumanMessage(content=state['expert_input'], role=state['prev'])
         xpert_out = AIMessage(content=update['expert_output'], role=xpert.name)
 
         update['prev'] = xpert.name
@@ -230,8 +222,7 @@ class BaseMoE:
 
         # Debug verbosity
         if self.verbose > Debug.Verbosity.quiet:
-            print_bold(f'Expert Responded: {CLIFont.light_green}`{
-                       state['expert_output']}`{CLIFont.reset}`\n')
+            print_bold(f'{xpert.name} Responded: {CLIFont.light_green}`{state['expert_output']}`{CLIFont.reset}`\n')
             print_bold(f'Next: {CLIFont.purple}Calling `{state['next']}`\n')
 
         return update

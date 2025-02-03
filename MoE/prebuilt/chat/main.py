@@ -21,7 +21,7 @@ if __name__ == '__main__':
         .set_name('ChatMoE')\
         .set_description(None)\
         .set_router(ChatFactory.get(expert_name=ChatDirectory.Router))\
-        .set_verbosity(Debug.Verbosity.quiet)\
+        .set_verbosity(Debug.Verbosity.low)\
         .set_experts([
             ChatFactory.get(expert_name=ChatDirectory.GenXpert),
             ChatFactory.get(expert_name=ChatDirectory.WebSearchXpert),

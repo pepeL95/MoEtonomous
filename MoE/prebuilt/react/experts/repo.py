@@ -19,7 +19,7 @@ class Router(BaseExpert):
             description=description or Router.__doc__,
             strategy=strategy,
             agent=agent or RunnableLambda(lambda state: (
-                f"\nAction: {PlanningXpert.__name__}"
+                f"\nAction: {IntentXtractor.__name__}"
                 f"\nAction Input: {state['input']}"
             )),
         )
@@ -37,8 +37,6 @@ class IntentXtractor(BaseExpert):
             agent=agent or EphemeralNLPAgent(
                 name='IntentXtractionAgent',
                 llm=LLMs.Phi35(),
-                prompt_parser=PromptParsers.Identity(),
-                # prompt_parser=PromptParsers.Phi35(),
                 system_prompt=(
                     '## Objective\n'
                     'You are an advanced reasoning expert tasked with generating a concise and insightful synthesis of a given input query. '
@@ -66,7 +64,6 @@ class PlanningXpert(BaseExpert):
             agent=agent or EphemeralNLPAgent(
                 name='PlanningAgent',
                 llm=LLMs.Gemini().bind(stop=["\nExpert Response:"]),
-                prompt_parser=PromptParsers.Identity(),
                 prompt_template=PromptRepo.MoE_ReAct(),
                 system_prompt=(
                     '## System Information\n'
@@ -90,13 +87,17 @@ class SynthesisXpert(BaseExpert):
             agent=agent or EphemeralNLPAgent(
                 name='SynthesisAgent',
                 llm=LLMs.Phi35(),
-                prompt_parser=PromptParsers.Identity(),
-                # prompt_parser=PromptParsers.Phi35(),
                 prompt_template=(
+                    "## Task Background\n"
+                    "You are given an expert response to a previous unknown query. "
+                    "This response will be added to a scratchpad which tracks the query-response feedback loop. "
+                    "In order to reduce length in the scratchpad, we need to compress this expert response.\n\n"
                     "## Instructions\n"
-                    "Generate a one-sentence synthesis of the following. Make sure to include key terms in your synthesis.\n\n"
-                    "## Input\n"
-                    "{input}"
+                    "Your task is to extract the essence of the expert's response by synthesing it into a short, single sentence. This will be used to index the full expert response.\n\n"
+                    "## Expert Response\n"
+                    "**The expert response was*:* {input}\n\n"
+                    "### Output format\n"
+                    "Return **only** the sentence that will be used for indexing, nothing more!!"
                 ),
             ),
         )

@@ -1,13 +1,11 @@
-from agents.toolbox.toolschemas import ToolSchemas
-
-import ast
 from typing import List
-import xml.etree.ElementTree as ET
-
 from langchain_core.documents import Document
+
+from xml.etree.ElementTree import fromstring
+from agents.tools.toolschemas import ToolSchemas
 from langchain_core.output_parsers import JsonOutputParser
 
-        
+
 class StringParser:
     @staticmethod
     def from_langdocs(docs: List[Document]) -> str:
@@ -18,23 +16,6 @@ class StringParser:
     @staticmethod
     def from_array(docs: List[str]):
         return '\n\n'.join(docs)
-
-    @staticmethod
-    def to_array(input_str):
-        # Strip the surrounding code block markers if present
-        if input_str.startswith("```"):
-            code_block_start = input_str.find("['")
-            code_block_end = input_str.rfind("']") + 2
-            list_str = input_str[code_block_start:code_block_end]
-        else:
-            list_str = input_str
-
-        # Parse the list using ast.literal_eval for safe evaluation
-        try:
-            parsed_list = ast.literal_eval(list_str)
-            return parsed_list
-        except (SyntaxError, ValueError):
-            return []
 
 
 class ArxivParser:
@@ -47,7 +28,7 @@ class ArxivParser:
         @staticmethod
         def to_dict(xml_string: str) -> dict:
             # Parse XML string
-            root = ET.fromstring(xml_string)
+            root = fromstring(xml_string)
             # Define namespace
             namespace = {"atom": "http://www.w3.org/2005/Atom"}
 

@@ -3,7 +3,7 @@ from typing import Any
 from moe.base.mixture import BaseMoE
 from moe.base.strategies import BaseExpertStrategy
 
-from agents.parsers.output import StringParser
+from agents.parsers.generic import StringParser
 from moe.prebuilt.ragentive.postrieval.experts.factory import PostrievalDirectory
 
 

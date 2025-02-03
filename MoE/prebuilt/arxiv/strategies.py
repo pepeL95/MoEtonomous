@@ -1,4 +1,4 @@
-from agents.parsers.output import StringParser
+from agents.parsers.generic import StringParser
 from moe.base.mixture import BaseMoE
 from moe.base.strategies import BaseExpertStrategy
 from moe.prebuilt.arxiv.experts.factory import ArxivDirectory

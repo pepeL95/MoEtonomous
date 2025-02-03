@@ -1,11 +1,14 @@
-from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 from moe.base.expert import BaseExpert
+
+from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
+
 from RAG.postrieval.cross_encoding_reranker import CrossEncodingReranker
+
+from dev_tools.enums.llms import LLMs
 from dev_tools.enums.cross_encodings import CrossEncodings
 
 from langchain_core.runnables import RunnableLambda
 
-from dev_tools.enums.llms import LLMs
 
 class Router(BaseExpert):
     def __init__(self, agent=None, description=None, name=None, strategy=None):

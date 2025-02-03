@@ -1,4 +1,4 @@
-from agents.parsers.output import StringParser
+from agents.parsers.base.output_parser import StringParser
 
 import math
 import torch
