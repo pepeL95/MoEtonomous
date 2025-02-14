@@ -35,7 +35,7 @@ class RerankingExpert(BaseExpert):
             description=description or RerankingExpert.__doc__,
             strategy=strategy,
             agent=agent or CrossEncodingReranker(
-                cross_encoder=CrossEncodings.sentence_transformer_miniLM()
+                cross_encoder=CrossEncodings.LocalMiniLM()
             ).as_reranker(rerank_kwargs={'k': 4})
         )
 

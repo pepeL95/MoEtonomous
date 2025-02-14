@@ -1,6 +1,7 @@
+from agents.parsers.generic import ArxivXML
 from dev_tools.utils.clifont import print_bold, CLIFont
 
-from agents.parsers.generic import ArxivParser
+
 from agents.tools.toolschemas import JiraSchema, ArxivSchema
 
 from langchain_core.tools import tool
@@ -20,7 +21,7 @@ from requests.exceptions import HTTPError
 
 ############################################################# Websearch #########################################################################
 
-class Websearch:
+class WebsearchToolbox:
     @staticmethod
     def duck_duck_go_tool():
         ddg_search_tool = DuckDuckGoSearchResults(api_wrapper=DuckDuckGoSearchAPIWrapper(max_results=15))
@@ -35,7 +36,7 @@ class Websearch:
 
 ################################################################ Jira ###########################################################################
 
-class JiraSchema:
+class JiraToolbox:
     jira_wrapper = JiraAPIWrapper()
     _jira = JIRA(server=os.environ['JIRA_INSTANCE_URL'], basic_auth=(os.environ['JIRA_USERNAME'], os.environ['JIRA_API_TOKEN']))
     
@@ -46,7 +47,7 @@ class JiraSchema:
                 if not state:
                     raise ValueError("No issue key provided. Please provide the issue you want to get transitions for.")
                 
-                transitions = JiraSchema._jira.transitions(issue)
+                transitions = JiraToolbox._jira.transitions(issue)
                 for transition in transitions:
                     if transition['name'].strip().lower() == state.strip().lower():
                         return transition['id']
@@ -75,7 +76,7 @@ class JiraSchema:
             summary ~ 'test'''
         
         try:
-            tool = JiraSchema._get_jql_query_tool()
+            tool = JiraToolbox._get_jql_query_tool()
             return tool.invoke(jql_input)
         except ValueError as e:
             return str(e)
@@ -100,7 +101,7 @@ class JiraSchema:
                 'issuetype': {'name': issue_type},
             }
             
-            new_issue = JiraSchema._jira.create_issue(fields=issue_dict)
+            new_issue = JiraToolbox._jira.create_issue(fields=issue_dict)
             print_bold(f'{CLIFont.blue}Issue: {new_issue}{CLIFont.reset}')
             return new_issue
         
@@ -133,7 +134,7 @@ class JiraSchema:
             if not fields_to_update.values():
                 return 'No fields were given to update. Please provide the fields you want me to update'
             
-            issue = JiraSchema._jira.issue(issue_key)
+            issue = JiraToolbox._jira.issue(issue_key)
             issue.update(fields=fields_to_update)
             return f'Successfully updated issue {issue_key}'
         
@@ -153,11 +154,11 @@ class JiraSchema:
                 raise ValueError('Please provide the issue key of the item you want to transition')
             
             # Fetch issue
-            issue = JiraSchema._jira.issue(issue_key)
+            issue = JiraToolbox._jira.issue(issue_key)
             # Validate state is indeed an accepted transition for the given issue
-            JiraSchema.Utils._validate_transition(issue, state)
+            JiraToolbox.Utils._validate_transition(issue, state)
             # Perform transition
-            JiraSchema._jira.transition_issue(issue, state)
+            JiraToolbox._jira.transition_issue(issue, state)
             return f'Successfully transitioned issue {issue_key} to {state}'
         
         except JIRAError as e:
@@ -176,7 +177,7 @@ class JiraSchema:
             if not issue_key:
                 raise ValueError('Please provide the issue key of the item you want to transition')
             
-            issue = JiraSchema._jira.issue(issue_key)
+            issue = JiraToolbox._jira.issue(issue_key)
             issue.delete()
         
         except JIRAError as e:
@@ -188,9 +189,9 @@ class JiraSchema:
     
 ############################################################# Arxiv #########################################################################
 
-class ArxivSchema:
+class ArxivToolbox:
     @tool(args_schema=ArxivSchema.ApiSearchItems)
-    def build_query(query: str, cat: str, N: int) -> str:
+    def build_query_tool(query: str, cat: str, N: int) -> str:
         '''Use this tool when a query json object is given. An example of a query object is: {"query": "space physics", "cat": "physics.space-ph", "N": 10}'''
         
         # Clean out query
@@ -204,7 +205,7 @@ class ArxivSchema:
         return f"https://export.arxiv.org/api/query?search_query=cat:{cat}+AND+ti:{query}&sortBy=submittedDate&sortOrder=descending&max_results={N}"
 
     @tool(return_direct=True)
-    def execute_query(url:str) -> List[dict]:
+    def execute_query_tool(url:str) -> List[dict]:
         '''This tool executes a valid query for fetching papers in the Arxiv api system. An example of the ```url``` input is: "https://export.arxiv.org/api/query?search_query=cat:cs.CL+AND+ti:graph%20rag&sortBy=submittedDate&sortOrder=descending&max_results=10"'''
         
         try:
@@ -213,7 +214,7 @@ class ArxivSchema:
             xml_data = response.read().decode('utf-8')
             
             # Parse XML data to dictionary
-            articles = ArxivParser.XML.to_dict(xml_data)
+            articles = ArxivXML.to_dict(xml_data)
             return articles
 
         except URLError as e:

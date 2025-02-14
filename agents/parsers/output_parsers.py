@@ -1,7 +1,11 @@
 import ast
 
 from typing import List, Any
+from xml.etree.ElementTree import fromstring
+
 from langchain_core.output_parsers.base import BaseOutputParser
+
+from agents.tools.toolschemas import Arxiv
 
 class ArrayParser(BaseOutputParser[List[Any]]):
     '''Parse a string representation of a List of primitives into an array of primitives'''

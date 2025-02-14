@@ -1,5 +1,5 @@
 from agents.config.debug import Debug
-from agents.tools.toolbox import Websearch
+from agents.tools.toolbox import WebsearchToolbox
 from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 from agents.prebuilt.ephemeral_tool_agent import EphemeralToolAgent
 
@@ -80,7 +80,7 @@ class WebSearchXpert(BaseExpert):
                 name='DuckDuckGoAgent',
                 llm=LLMs.Gemini(),
                 prompt_parser=PromptParsers.Identity(),
-                tools=[Websearch.duck_duck_go_tool()],
+                tools=[WebsearchToolbox.duck_duck_go_tool()],
                 output_parser=StrOutputParser(),
                 system_prompt=(
                     "## Instructions\n"

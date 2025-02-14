@@ -164,8 +164,7 @@ class EphemeralToolAgent(BaseAgent):
 
         # Invalid input format
         else:
-            raise ValueError(f"Incorrect type for input_object: Should be one of Union[str, List[dict], List[BaseMessage], BaseMessage]), but was given {
-                             type(input)}")
+            raise ValueError(f"Incorrect type for input_object: Should be one of Union[str, List[dict], List[BaseMessage], BaseMessage]), but was given {type(input)}")
 
         # To stream, or not to stream, that is the question
         if stream:

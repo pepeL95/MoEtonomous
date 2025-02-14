@@ -1,12 +1,13 @@
 from langchain_core.runnables import RunnableLambda
 
-from agents.tools.toolbox import Arxiv
-from agents.parsers.generic import ArxivParser
+from dev_tools.enums.llms import LLMs
 from dev_tools.enums.prompts import AgentPrompts
+
+from agents.tools.toolbox import ArxivToolbox
+from agents.tools.toolschemas import ArxivSchema
+from langchain_core.output_parsers import JsonOutputParser
 from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 from agents.prebuilt.ephemeral_tool_agent import EphemeralToolAgent
-
-from dev_tools.enums.llms import LLMs
 
 from moe.base.expert import BaseExpert
 
@@ -43,7 +44,7 @@ class QbuilderXpert(BaseExpert):
                 name='ArxivQbuilderAgent',
                 llm=LLMs.Gemini(),
                 prompt_template=AgentPrompts.Arxiv.ApiQueryBuildFewShot.value,
-                output_parser=ArxivParser.ApiSearchItems.to_json(),
+                output_parser=JsonOutputParser(pydantic_object=ArxivSchema.ApiSearchItems),
                 system_prompt=(
                     'You are dexterous at taking in a search query and converting it '
                     'into a valid format for searching the Arxiv api for scholar papers. '
@@ -66,7 +67,7 @@ class SearchXpert(BaseExpert):
             agent=agent or EphemeralToolAgent(
                 name='ArxivSearchAgent',
                 llm=LLMs.Gemini(),
-                tools=[Arxiv.build_query, Arxiv.execute_query],
+                tools=[ArxivToolbox.build_query_tool, ArxivToolbox.execute_query_tool],
                 system_prompt=(
                     'You are a search expert, specialized in searching the Arxiv api for scholar papers.\n'
                     'Your task is to build a query and then execute it.\n'
