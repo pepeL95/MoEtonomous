@@ -11,49 +11,8 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 from moe.config.debug import Debug
 from moe.base.expert import BaseExpert
 from moe.base.strategies import BaseMoEStrategy
-from moe.default.strategies import DefaultMoEStrategy
 
 from dev_tools.utils.clifont import CLIFont, print_bold
-
-
-class MoEBuilder:
-    def __init__(self):
-        self.strategy = DefaultMoEStrategy()
-
-    def set_name(self, name):
-        self.name = name
-        return self
-
-    def set_description(self, description):
-        self.description = description
-        return self
-
-    def set_router(self, router):
-        self.router = router
-        return self
-
-    def set_experts(self, experts):
-        self.experts = experts
-        return self
-
-    def set_strategy(self, strategy):
-        self.strategy = strategy
-        return self
-
-    def set_verbosity(self, verbosity):
-        self.verbosity = verbosity
-        return self
-
-    def build(self):
-        return BaseMoE(
-            name=self.name,
-            description=self.description,
-            router=self.router,
-            experts=self.experts,
-            strategy=self.strategy,
-            verbose=self.verbosity,
-        ).build()
-
 
 class BaseMoE:
     FINISH = '__end__'
