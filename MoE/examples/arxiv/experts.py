@@ -9,7 +9,7 @@ from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 from agents.prebuilt.ephemeral_tool_agent import EphemeralToolAgent
 
 from moe.annotations.core import Expert
-from moe.prebuilt.arxiv.strategies import QueryStrategy, SearchStrategy, SigmaStrategy
+from moe.examples.arxiv.strategies import QueryStrategy, SearchStrategy, SigmaStrategy
 
 
 @Expert(QueryStrategy)

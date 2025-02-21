@@ -12,12 +12,12 @@ if not os.environ.get('ENV'):
 
 ###########################################################################
 
-from moe.prebuilt.arxiv.experts import Factory
+from moe.examples.arxiv.experts import Factory
 from moe.annotations.core import MoE, ForceFirst 
 from moe.default.strategies import DefaultMoEStrategy
 
 if __name__ == '__main__':
-    # Define MoE
+    
     @MoE(DefaultMoEStrategy)
     @ForceFirst('QbuilderXpert')
     class ArxivMoE:
