@@ -21,6 +21,7 @@ if __name__ == '__main__':
     @MoE(DefaultMoEStrategy)
     @ForceFirst('QbuilderXpert')
     class ArxivMoE:
+        '''This MoE fetches and summarizes articles from the Arxiv api, given a natural language query'''
         experts = [
             Factory.get(expert_name=Factory.Dir.QbuilderXpert),
             Factory.get(expert_name=Factory.Dir.SearchXpert),

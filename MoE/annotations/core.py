@@ -8,78 +8,123 @@ from langchain_core.runnables import RunnableLambda
 
 def Expert(strategy=DefaultExpertStrategy):
     """Decorator to convert a class into an expert with the given strategy."""
+    if not callable(strategy):
+        raise TypeError("The provided strategy must be callable.")
+
     def wrapper(cls):
         class WrappedExpert(BaseExpert):
             def __init__(self, *args, **kwargs):
-                name = kwargs.get('name', None) or cls.__name__
-                description = kwargs.get('description', None) or cls.__doc__
-                agent = kwargs.get('agent', None) or cls.agent
+                try:
+                    name = kwargs.get('name') or cls.__name__
+                    description = kwargs.get('description') or cls.__doc__
+                    agent = kwargs.get('agent') or getattr(cls, 'agent', None)
 
-                # Delete static agent
-                if hasattr(cls, 'agent'):
-                    delattr(cls, 'agent')
+                    if agent is None:
+                        raise RuntimeError(f"agent cannot be None")
+                    
+                    if description is None or not len(description):
+                        raise RuntimeError(f"description cannot be empty. Provide docstring for your expert class")
 
-                super().__init__(agent=agent, description=description, name=name, strategy=strategy())
+                    # Delete static agent safely
+                    if hasattr(cls, 'agent'):
+                        try:
+                            delattr(cls, 'agent')
+                        except AttributeError as e:
+                            raise RuntimeError(f"Failed to remove 'agent' attribute from {cls.__name__}: {e}")
+
+                    super().__init__(agent=agent, description=description, name=name, strategy=strategy())
+                except Exception as e:
+                    raise RuntimeError(f"Error initializing WrappedExpert for {cls.__name__}: {e}")
 
         return WrappedExpert
     return wrapper
 
 
-from functools import wraps
-
-
 # ForceFirst decorator to force first expert
 def ForceFirst(next_expert_name):
+    if not isinstance(next_expert_name, str) or not next_expert_name.strip():
+        raise ValueError("Error at @ForceFirst: `next_expert_name` must be a non-empty string.")
+
     def decorator(cls):
-        cls.router = BaseExpert(
-            name='Router',
-            description='Static router',
-            strategy=DefaultExpertStrategy(),
-            agent=RunnableLambda(lambda state: (
-                f"\nAction: {next_expert_name}"
-                f"\nAction Input: {state['input']}"
-            ))
-        )
+        try:
+            cls.router = BaseExpert(
+                name='Router',
+                description='Static router',
+                strategy=DefaultExpertStrategy(),
+                agent=RunnableLambda(lambda state: (
+                    f"\nAction: {next_expert_name}"
+                    f"\nAction Input: {state.get('input', 'No Input')}"
+                ))
+            )
+        except Exception as e:
+            raise RuntimeError(f"Error initializing router for {cls.__name__}: {e}")
+
         return cls
     return decorator
 
 # Autonomous decorator to store the router instance
 def Autonomous(llm):
+    if llm is None:
+        raise ValueError("error at @Autonomous: llm cannot be None.")
+
     def decorator(cls):
-        cls.router = AutonomousRouter(llm)  # Store router on the class
+        try:
+            cls.router = AutonomousRouter(llm)  # Store router on the class
+        except Exception as e:
+            raise RuntimeError(f"Error initializing AutonomousRouter for {cls.__name__}: {e}")
+
         return cls
     return decorator
 
 # MoE decorator to wrap the class and initialize it properly
 def MoE(strategy=DefaultMoEStrategy):
+    """Decorator for mixture of experts initialization."""
+    if not callable(strategy):
+        raise TypeError("The provided strategy must be callable.")
+
     def wrapper(cls):
         class WrappedMoE(BaseMoE):
             def __init__(self, *args, **kwargs):
-                name = kwargs.get('name', None) or cls.__name__
-                description = kwargs.get('description', None) or cls.__doc__
-                experts = kwargs.get('experts') or cls.experts
-                router = kwargs.get('router', None) or getattr(cls, 'router', None)
-                verbose = kwargs.get('verbose', None) or 0
+                try:
+                    name = kwargs.get('name') or cls.__name__
+                    description = kwargs.get('description') or cls.__doc__
+                    experts = kwargs.get('experts') or getattr(cls, 'experts', None)
+                    router = kwargs.get('router') or getattr(cls, 'router', None)
+                    verbose = kwargs.get('verbose', 0)
 
-                # Delete static experts
-                if hasattr(cls, 'experts'):
-                    delattr(cls, 'experts')
+                    if router is None:
+                        raise RuntimeError(f"router cannot be None")
                     
-                # Delete static router
-                if hasattr(cls, 'router'):
-                    delattr(cls, 'router')
+                    if description is None or not len(description):
+                        raise RuntimeError(f"description cannot be empty. Provide docstring for your expert class")
 
-                super().__init__(
-                    name=name,
-                    description=description,
-                    strategy=strategy(),
-                    verbose=verbose,
-                    experts=experts,
-                    router=router,
-                )
+                    if not isinstance(verbose, int) or verbose < 0:
+                        raise ValueError("verbose must be a non-negative integer.")
+
+                    # Delete static experts safely
+                    if hasattr(cls, 'experts'):
+                        try:
+                            delattr(cls, 'experts')
+                        except AttributeError as e:
+                            raise RuntimeError(f"Failed to remove 'experts' attribute from {cls.__name__}: {e}")
+                    
+                    # Delete static router safely
+                    if hasattr(cls, 'router'):
+                        try:
+                            delattr(cls, 'router')
+                        except AttributeError as e:
+                            raise RuntimeError(f"Failed to remove 'router' attribute from {cls.__name__}: {e}")
+
+                    super().__init__(
+                        name=name,
+                        description=description,
+                        strategy=strategy(),
+                        verbose=verbose,
+                        experts=experts,
+                        router=router,
+                    )
+                except Exception as e:
+                    raise RuntimeError(f"Error initializing WrappedMoE for {cls.__name__}: {e}")
 
         return WrappedMoE
     return wrapper
-
-
-

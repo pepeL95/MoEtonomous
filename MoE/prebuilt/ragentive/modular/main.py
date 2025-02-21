@@ -20,6 +20,10 @@ if __name__ == '__main__':
     @MoE(DefaultMoEStrategy)
     @ForceFirst('Pretrieval')
     class Ragentive:
+        '''
+        Sample implementation of a modular, agentive RAG pipeline.
+        Note: Assumes data embeddings at RAG/data/vector/toy-embeddings
+        '''
         experts = [
             Factory.get(expert_name=Factory.Dir.Pretrieval),
             Factory.get(expert_name=Factory.Dir.Retrieval),
