@@ -4,10 +4,6 @@ from dotenv import load_dotenv
 import sys
 import os
 
-from dev_tools.enums.llms import LLMs
-from moe.annotations.core import Autonomous, ForceFirst, MoE
-from moe.default.strategies import DefaultMoEStrategy
-
 if not os.environ.get('ENV'):
     print('Setting up env')
     load_dotenv(os.environ["RND_ENV_CONFIG_PATH"])  # .env file path
@@ -15,9 +11,11 @@ if not os.environ.get('ENV'):
 
 ###########################################################################
 
-from agents.config.debug import Debug
-from moe.base.mixture import MoEBuilder
+from dev_tools.enums.llms import LLMs
+
 from moe.prebuilt.chat.experts import Factory
+from moe.annotations.core import MoE, Autonomous
+from moe.default.strategies import DefaultMoEStrategy
 
 if __name__ == '__main__':    
     
