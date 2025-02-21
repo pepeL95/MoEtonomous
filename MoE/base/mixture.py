@@ -11,13 +11,14 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 from moe.config.debug import Debug
 from moe.base.expert import BaseExpert
 from moe.base.strategies import BaseMoEStrategy
+from moe.default.strategies import DefaultMoEStrategy
 
 from dev_tools.utils.clifont import CLIFont, print_bold
 
 
 class MoEBuilder:
     def __init__(self):
-        self.strategy = None
+        self.strategy = DefaultMoEStrategy()
 
     def set_name(self, name):
         self.name = name
@@ -86,6 +87,8 @@ class BaseMoE:
         self.strategy = strategy
         self._FINISH = '__end__'
 
+        self.build()
+
 
 ####################################################### Class Methods #############################################################
 
@@ -131,8 +134,7 @@ class BaseMoE:
 
     def _create_router_node(self, state: State):
         # All keys in State are required*
-        required_keys = {'input', 'prev', 'next',
-                         'router_scratchpad', 'expert_output', 'ephemeral_mem'}
+        required_keys = {'input', 'prev', 'next', 'router_scratchpad', 'expert_output', 'ephemeral_mem'}
         assert required_keys.issubset(state.keys(
         )), f'You are missing at least one of the following required keys {required_keys}'
 
@@ -150,7 +152,7 @@ class BaseMoE:
             raise ValueError(f'Next state is not defined in the mixture. Must be one of {self.experts.keys()}, but got {state['next']}')
 
         # Avoid infinite loops
-        if state['next'] == state['prev']:
+        if state['next'] == state['prev'] or state['next'] is None:
             state['next'] = self.router.name
 
         # If xpert decided where to go next, go there

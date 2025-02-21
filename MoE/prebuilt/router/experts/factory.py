@@ -1,4 +1,4 @@
-from moe.prebuilt.react.experts.repo import Router, IntentXtractor, PlanningXpert, SynthesisXpert
+from moe.prebuilt.router.experts.repo import Router, IntentXtractor, PlanningXpert, SynthesisXpert
 
 
 class ReActDirectory:
@@ -11,17 +11,17 @@ class ReActDirectory:
 
 class ReActFactory:
     @staticmethod
-    def get(expert_name: str, agent=None):
-        from moe.prebuilt.react.strategies import PlanningStrategy, SynthesisStrategy, IntentXtractStrategy, RouterStrategy
+    def get(expert_name: str, llm):
+        from moe.prebuilt.router.strategies import PlanningStrategy, SynthesisStrategy, IntentXtractStrategy, InnerStrategy
         
         if expert_name == ReActDirectory.Router:
-            return Router(strategy=RouterStrategy())
+            return Router(strategy=InnerStrategy())
         if expert_name == ReActDirectory.IntentXtractor:
-            return IntentXtractor(agent=agent, strategy=IntentXtractStrategy())
+            return IntentXtractor(llm=llm, strategy=IntentXtractStrategy())
         if expert_name == ReActDirectory.PlanningXpert:
-            return PlanningXpert(agent=agent, strategy=PlanningStrategy())
+            return PlanningXpert(llm=llm, strategy=PlanningStrategy())
         if expert_name == ReActDirectory.SynthesisXpert:
-            return SynthesisXpert(agent=agent, strategy=SynthesisStrategy())
+            return SynthesisXpert(llm=llm, strategy=SynthesisStrategy())
         if expert_name == ReActDirectory.ActionExecXpert:
             return None
         raise ValueError(f'No expert by name {expert_name} exists.')

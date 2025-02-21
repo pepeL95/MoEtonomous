@@ -1,12 +1,5 @@
 from moe.base.mixture import BaseMoE
-from moe.prebuilt.ragentive.modular.experts.factory import RagDirectory
 from moe.base.strategies import BaseExpertStrategy
-
-
-class RouterStrategy(BaseExpertStrategy):
-    def execute(self, expert, state):
-        output = expert.invoke(state)
-        return {'expert_output': output}
     
 class PretrievalStrategy(BaseExpertStrategy):
     def execute(self, expert, state):
@@ -19,7 +12,7 @@ class PretrievalStrategy(BaseExpertStrategy):
         state['expert_output'] = "Successfully finished the pre-retrieval step of the RAG pipeline."
         state['kwargs']['hyde'] = output['kwargs']['hyde']
         state['kwargs']['enhanced_queries'] = output['kwargs']['enhanced_queries']
-        state['next'] = RagDirectory.Retrieval
+        state['next'] = 'Retrieval'
         return state
 
 class RetrievalStrategy(BaseExpertStrategy):
@@ -32,7 +25,7 @@ class RetrievalStrategy(BaseExpertStrategy):
 
         state['expert_output'] = 'Successfully retrieved relevant documents.'
         state['kwargs']['context'] = outputs
-        state['next'] = RagDirectory.PostrievalMoE
+        state['next'] = 'Postrieval'
         return state
 
 class PostrievalStrategy(BaseExpertStrategy):

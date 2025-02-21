@@ -11,27 +11,23 @@ if not os.environ.get('ENV'):
 
 ###########################################################################
 
-from agents.config.debug import Debug
-from moe.base.mixture import MoEBuilder
+from moe.annotations.core import ForceFirst, MoE
 from moe.default.strategies import DefaultMoEStrategy
-from moe.prebuilt.ragentive.modular.experts.factory import RagDirectory, RagFactory
+from moe.prebuilt.ragentive.modular.experts import Factory
 
 if __name__ == '__main__':
-    # Init Chat MoE
-    modular_rag = MoEBuilder()\
-        .set_name('ModularRagMoE')\
-        .set_description(None)\
-        .set_router(RagFactory.get(expert_name=RagDirectory.Router))\
-        .set_verbosity(Debug.Verbosity.quiet)\
-        .set_strategy(DefaultMoEStrategy())\
-        .set_experts([
-            RagFactory.get(expert_name=RagDirectory.PretrievalMoE),
-            RagFactory.get(expert_name=RagDirectory.Retrieval),
-            RagFactory.get(expert_name=RagDirectory.PostrievalMoE),
-        ])\
-        .build()
+    # Define MoE
+    @MoE(DefaultMoEStrategy)
+    @ForceFirst('Pretrieval')
+    class Ragentive:
+        experts = [
+            Factory.get(expert_name=Factory.Dir.Pretrieval),
+            Factory.get(expert_name=Factory.Dir.Retrieval),
+            Factory.get(expert_name=Factory.Dir.Postrieval),
+        ]
 
     # Run
+    modular_rag = Ragentive()
     user_input = input('user: ')
     state = modular_rag.invoke({
         'input': user_input,

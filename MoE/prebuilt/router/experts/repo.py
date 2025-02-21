@@ -26,7 +26,7 @@ class Router(BaseExpert):
 
 
 class IntentXtractor(BaseExpert):
-    def __init__(self, agent=None, description=None, name=None, strategy=None):
+    def __init__(self, agent=None, description=None, name=None, strategy=None, llm=None):
         if strategy is None:
             raise ValueError('strategy cannot be None')
 
@@ -34,9 +34,9 @@ class IntentXtractor(BaseExpert):
             name=name or IntentXtractor.__name__,
             description=description or IntentXtractor.__doc__,
             strategy=strategy,
-            agent=agent or EphemeralNLPAgent(
+            agent=EphemeralNLPAgent(
                 name='IntentXtractionAgent',
-                llm=LLMs.Phi35(),
+                llm=llm,
                 system_prompt=(
                     '## Objective\n'
                     'You are an advanced reasoning expert tasked with generating a concise and insightful synthesis of a given input query. '
@@ -53,7 +53,7 @@ class IntentXtractor(BaseExpert):
 
 
 class PlanningXpert(BaseExpert):
-    def __init__(self, agent=None, description=None, name=None, strategy=None):
+    def __init__(self, agent=None, description=None, name=None, strategy=None, llm=None):
         if strategy is None:
             raise ValueError('strategy cannot be None')
 
@@ -61,13 +61,13 @@ class PlanningXpert(BaseExpert):
             name=name or PlanningXpert.__name__,
             description=description or PlanningXpert.__doc__,
             strategy=strategy,
-            agent=agent or EphemeralNLPAgent(
+            agent=EphemeralNLPAgent(
                 name='PlanningAgent',
-                llm=LLMs.Gemini().bind(stop=["\nExpert Response:"]),
+                llm=llm.bind(stop=["\nExpert Response:"]),
                 prompt_template=PromptRepo.MoE_ReAct(),
                 system_prompt=(
                     '## System Information\n'
-                    'You are a strategic decision-making agent, who excels at immediate action planning. '
+                    'You are a strategic decision-making agent who excels at immediate action planning. '
                     'Keep your plan concise.\n'
                     # 'Consider the following chat history (if any).'
                 ),
@@ -76,7 +76,7 @@ class PlanningXpert(BaseExpert):
 
 
 class SynthesisXpert(BaseExpert):
-    def __init__(self, agent=None, description=None, name=None, strategy=None):
+    def __init__(self, agent=None, description=None, name=None, strategy=None, llm=None):
         if strategy is None:
             raise ValueError('strategy cannot be None')
 
@@ -84,9 +84,9 @@ class SynthesisXpert(BaseExpert):
             name=name or SynthesisXpert.__name__,
             description=description or SynthesisXpert.__doc__,
             strategy=strategy,
-            agent=agent or EphemeralNLPAgent(
+            agent=EphemeralNLPAgent(
                 name='SynthesisAgent',
-                llm=LLMs.Phi35(),
+                llm=llm,
                 prompt_template=(
                     "## Task Background\n"
                     "You are given an expert response to a previous unknown query. "

@@ -10,6 +10,7 @@ from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 from langchain_community.agent_toolkits.jira.toolkit import JiraToolkit
 
+
 import os
 from typing import List
 from urllib.parse import quote
@@ -24,7 +25,7 @@ from requests.exceptions import HTTPError
 class WebsearchToolbox:
     @staticmethod
     def duck_duck_go_tool():
-        ddg_search_tool = DuckDuckGoSearchResults(api_wrapper=DuckDuckGoSearchAPIWrapper(max_results=15))
+        ddg_search_tool = DuckDuckGoSearchResults(api_wrapper=DuckDuckGoSearchAPIWrapper(max_results=15), output_format="json")
         ddg_search_tool.name = 'duck_duck_go_tool'
         ddg_search_tool.description = (
             "A wrapper around Duck Duck Go Search. "

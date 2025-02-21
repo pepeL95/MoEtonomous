@@ -1,8 +1,23 @@
-from moe.base.expert import BaseExpert
-from moe.base.strategies import BaseExpertStrategy
 from moe.base.mixture import BaseMoE
+from moe.base.expert import BaseExpert
+from moe.base.strategies import BaseExpertStrategy, BaseMoEStrategy
 
-class RouterStrategy(BaseExpertStrategy):
+class RouterStrategy(BaseMoEStrategy):
+    '''Strategy for the MoE itself'''
+    def execute(self, moe, input):
+        output = moe.invoke({
+            'input': input['input'],
+            'kwargs': {
+                'scratchpad': input['scratchpad'],
+                'previous_expert': input['previous_expert'],
+                'experts': input['experts'],
+                'expert_names': input['expert_names'],
+            }
+        })
+
+        return output
+
+class InnerStrategy(BaseExpertStrategy):
     def execute(self, expert, state):
         # Note: state = input in this case by design
         output = expert.invoke(state)

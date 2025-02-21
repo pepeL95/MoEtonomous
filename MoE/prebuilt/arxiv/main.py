@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import sys
 import os
 
+
 if not os.environ.get('ENV'):
     print('Setting up env')
     load_dotenv(os.environ["RND_ENV_CONFIG_PATH"])  # .env file path
@@ -11,28 +12,25 @@ if not os.environ.get('ENV'):
 
 ###########################################################################
 
-from agents.config.debug import Debug
-from dev_tools.enums.llms import LLMs
-from moe.base.mixture import MoEBuilder
-from moe.prebuilt.arxiv.experts.factory import ArxivDirectory, ArxivFactory
+from moe.prebuilt.arxiv.experts import Factory
+from moe.annotations.core import MoE, ForceFirst 
+from moe.default.strategies import DefaultMoEStrategy
 
 if __name__ == '__main__':
-    # Init Chat MoE
-    chat = MoEBuilder()\
-        .set_name('ArxivMoE')\
-        .set_description(None)\
-        .set_router(ArxivFactory.get(expert_name=ArxivDirectory.Router))\
-        .set_verbosity(Debug.Verbosity.quiet)\
-        .set_experts([
-            ArxivFactory.get(expert_name=ArxivDirectory.QbuilderXpert),
-            ArxivFactory.get(expert_name=ArxivDirectory.SearchXpert),
-            ArxivFactory.get(expert_name=ArxivDirectory.SigmaXpert),
-            ])\
-        .build()
+    # Define MoE
+    @MoE(DefaultMoEStrategy)
+    @ForceFirst('QbuilderXpert')
+    class ArxivMoE:
+        experts = [
+            Factory.get(expert_name=Factory.Dir.QbuilderXpert),
+            Factory.get(expert_name=Factory.Dir.SearchXpert),
+            Factory.get(expert_name=Factory.Dir.SigmaXpert),
+        ]
 
     # Run
+    arxiv_moe = ArxivMoE()
     user_input = input('user: ')
-    state = chat.invoke({
+    state = arxiv_moe.invoke({
         'input': user_input,
     })
 

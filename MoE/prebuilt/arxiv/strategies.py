@@ -1,14 +1,6 @@
 from agents.parsers.generic import StringParser
 from moe.base.mixture import BaseMoE
 from moe.base.strategies import BaseExpertStrategy
-from moe.prebuilt.arxiv.experts.factory import ArxivDirectory
-
-
-class RouterStrategy(BaseExpertStrategy):
-    def execute(self, expert, state:BaseMoE.State):
-        output = expert.invoke(state)
-        state = {'expert_output': output}
-        return state
 
 
 class QueryStrategy(BaseExpertStrategy):
@@ -17,7 +9,7 @@ class QueryStrategy(BaseExpertStrategy):
 
         state['expert_output'] = 'Successfully built json query: ' + str(output)
         state['kwargs']['apiJson'] = output
-        state['next'] = ArxivDirectory.SearchXpert
+        state['next'] = 'SearchXpert'
         return state
 
 
@@ -27,7 +19,7 @@ class SearchStrategy(BaseExpertStrategy):
 
         state['expert_output'] = 'Successfully fetched papers from Arxiv.'
         state['kwargs']['papers'] = output
-        state['next'] = ArxivDirectory.SigmaXpert
+        state['next'] = 'SigmaXpert'
         return state
 
 

@@ -4,8 +4,6 @@ from moe.base.mixture import BaseMoE
 from moe.base.strategies import BaseExpertStrategy
 
 from agents.parsers.generic import StringParser
-from moe.prebuilt.ragentive.postrieval.experts.factory import PostrievalDirectory
-
 
 class RouterStrategy(BaseExpertStrategy):
     def execute(self, expert, state) -> dict[str, Any]:
@@ -29,7 +27,7 @@ class RerankingStrategy(BaseExpertStrategy):
 
         state['kwargs']['context'] = StringParser.from_langdocs(list(outputs))
         state['expert_output'] = state['kwargs']['context']
-        state['next'] = PostrievalDirectory.ContextExpert
+        state['next'] = 'ContextExpert'
         return state
 
 

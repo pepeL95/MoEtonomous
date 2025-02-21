@@ -1,7 +1,5 @@
 from moe.base.mixture import BaseMoE
 from moe.base.strategies import BaseExpertStrategy
-from moe.prebuilt.ragentive.pretrieval.experts.factory import PretrievalDirectory
-
 
 class RouterStrategy(BaseExpertStrategy):
     def execute(self, expert, state):
@@ -17,7 +15,7 @@ class QueryAugmentationStrategy(BaseExpertStrategy):
         })
         state['expert_output'] = "Successfully enhanced the queries."
         state['kwargs']['enhanced_queries'] = [enhancement['query'] for enhancement in output['queries']]
-        state['next'] = PretrievalDirectory.HydeExpert
+        state['next'] = 'HydeExpert'
         return state
 
 
