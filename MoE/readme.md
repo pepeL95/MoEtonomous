@@ -1,4 +1,4 @@
-# coMoE uso la mierda esta?...get it? 😆
+# coMoE uso la mierda esta?
 
 - MoEs are an abstraction of a LangGraph spanning tree.
 - Basically, we just:
