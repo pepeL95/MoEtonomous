@@ -109,7 +109,7 @@ class GenXpertStrategy(BaseExpertStrategy):
 - Note: When using the `@MoE` annotation, you **MUST** have your `experts` array under your defined class.
 - Note: When using the `@MoE` annotation, you **MUST** provide a router through:
 - - 1 `@Autonomous(llm)` for an autonomous router.
-- - 2 `@ForceFirst(expert_name)` if your MoE is linear, this provides the starting point.
+- - 2 `@ForceFirst(expert_name)` if your MoE is linear and you enforce next in all your strategies. Provides the starting point
 
 ```python
 from dev_tools.enums.llms import LLMs
