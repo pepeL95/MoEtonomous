@@ -5,7 +5,7 @@
 ```plaintext
 
 #Locals
-SRC=<path-to-source (e.g. ~/Users/.../MoEtonomous)>
+SRC=<path-to-source (e.g. ~/.../MoEtonomous)>
 VDB_PATH=<path-to-vdb (e.g. ~/.../MoEtonomous/RAG/data/vector/toy-embeddings)>
 
 # Langchain
