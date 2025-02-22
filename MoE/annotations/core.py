@@ -20,7 +20,7 @@ def Expert(strategy=DefaultExpertStrategy):
                     agent = kwargs.get('agent') or getattr(cls, 'agent', None)
 
                     if agent is None:
-                        raise RuntimeError(f"agent cannot be None")
+                        raise RuntimeError(f"agent cannot be None. Provide your agent as a static element of {cls.__name__}")
                     
                     if description is None or not len(description):
                         raise RuntimeError(f"description cannot be empty. Provide docstring for your expert class")
@@ -93,10 +93,13 @@ def MoE(strategy=DefaultMoEStrategy):
                     verbose = kwargs.get('verbose', 0)
 
                     if router is None:
-                        raise RuntimeError(f"router cannot be None")
+                        raise RuntimeError(f"router cannot be None. Anotate your moe with @Autonomous or @ForceFirst")
                     
                     if description is None or not len(description):
                         raise RuntimeError(f"description cannot be empty. Provide docstring for your expert class")
+                    
+                    if experts is None:
+                        raise RuntimeError(f"You must declare your `experts` array as a static element of the class {cls.__name__}")
 
                     if not isinstance(verbose, int) or verbose < 0:
                         raise ValueError("verbose must be a non-negative integer.")

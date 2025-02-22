@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Union
+from langchain_core.runnables import Runnable
 from langchain_core.embeddings.embeddings import Embeddings
 from transformers.models.mpnet.modeling_mpnet import MPNetModel
 from transformers.models.mpnet.tokenization_mpnet_fast import MPNetTokenizerFast
@@ -15,7 +16,7 @@ RANDOM_SEED = 224  # Fixed seed for reproducibility
 class RAPTOR:
     def __init__(
             self,
-            agent: BaseAgent,
+            agent: BaseAgent | Runnable,
             embd: Union[MPNetModel, Embeddings],
             tokenizer: MPNetTokenizerFast = None,
             device: str = None

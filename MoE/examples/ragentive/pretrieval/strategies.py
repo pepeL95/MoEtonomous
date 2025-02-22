@@ -1,11 +1,6 @@
 from moe.base.mixture import BaseMoE
 from moe.base.strategies import BaseExpertStrategy
 
-class RouterStrategy(BaseExpertStrategy):
-    def execute(self, expert, state):
-        output = expert.invoke(state)
-        return {'expert_output': output}
-
 
 class QueryAugmentationStrategy(BaseExpertStrategy):
     def execute(self, expert, state):

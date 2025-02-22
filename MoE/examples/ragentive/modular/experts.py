@@ -5,9 +5,9 @@ from dev_tools.enums.embeddings import Embeddings
 
 from moe.base.mixture import BaseMoE
 from moe.annotations.core import Expert, ForceFirst, MoE
-from moe.prebuilt.ragentive.pretrieval.experts import Factory as PreFactory 
-from moe.prebuilt.ragentive.postrieval.experts import Factory as PostFactory 
-from moe.prebuilt.ragentive.modular.strategies import PostrievalStrategy, PretrievalStrategy, RetrievalStrategy
+from moe.examples.ragentive.pretrieval.experts import Factory as PreFactory 
+from moe.examples.ragentive.postrieval.experts import Factory as PostFactory 
+from moe.examples.ragentive.modular.strategies import PostrievalStrategy, PretrievalStrategy, RetrievalStrategy
 
 
 @MoE(PretrievalStrategy)

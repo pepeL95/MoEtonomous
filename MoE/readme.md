@@ -12,7 +12,7 @@
 - When building your MoE, the following project structure is recommended:
 
 ``` Plaintext
-custom_moe
+custom_moe/
 |
 |____ experts.py
 |
@@ -27,7 +27,7 @@ custom_moe
 
 ```python
 class State(TypedDict):
-    next: str # By default, your router decides, but can enforce it in your strategy (i.e. state['next'] = '<Expert Name>')
+    next: str # By default your router decides, but can enforce it in your strategy (i.e. state['next'] = '<Expert Name>')
     prev: str # the previous expert
     input: str # input to the MoE
     expert_input: str # internal expert input
@@ -58,15 +58,14 @@ class GenXpert:
         system_prompt='You are an intelligent expert.',
     )
 
-# ... other expert classes ...
+...
 
 ################## RECOMMENDED ######################
 
 class Factory:
     class Dir:
-        Router: str = 'Router'
         GenXpert: str = 'GenXpert'
-        # ... other expert names
+        ...
     
     @staticmethod
     def get(expert_name: str):
@@ -74,7 +73,7 @@ class Factory:
             return RouterMoE(llm=LLMs.Gemini()).build()
         if expert_name == Factory.Dir.GenXpert:
             return GenXpert()
-       # ... other experts
+        ...
         raise ValueError(f'No expert by name {expert_name} exists.')
 ```
 
@@ -105,27 +104,36 @@ class GenXpertStrategy(BaseExpertStrategy):
 
 ## `main.py`
 
-- Regression test your MoE
+- Regression test your MoE.
+- Annotate your custom MoE class with `@MoE`
+- Note: When using the `@MoE` annotation, you **MUST** have your `experts` array under your defined class.
+- Note: When using the `@MoE` annotation, you **MUST** provide a router through:
+- - 1 `@Autonomous(llm)` for an autonomous router.
+- - 2 `@ForceFirst(expert_name)` if your MoE is linear, this provides the starting point.
 
 ```python
+from dev_tools.enums.llms import LLMs
 from moe.config.debug import Debug
 from moe.base.mixture import MoEBuilder
+from moe.annotations.core import MoE, Autonomous
+from moe.default.strategies import DefaultMoEStrategy
 from ...custom_moe.experts import Factory # Here is where the Factory comes in handy (e.g. imagine having many experts)
 
-if __name__ == '__main__':
-    # Init Chat MoE
-    moe = MoEBuilder()\
-        .set_name('<MoE name here>')\
-        .set_description('<MoE description here>')\
-        .set_router(Factory.get(Factory.Dir.Router))\
-        .set_verbosity(Debug.Verbosity.low)\
-        .set_experts([
-            Factory.get(Factory.Dir.GenXpert),
-            # ... other experts here
-        ])\
-        .build()
 
-    # Run once
+if __name__ == '__main__':
+    
+    @MoE(DefaultMoEStrategy)
+    @Autonomous(LLMs.Gemini())
+    class ChatMoE:
+        '''MoE that provides Conversational and Websearch functionality'''
+        experts = [
+            Factory.get(expert_name=Factory.Dir.GenXpert),
+            Factory.get(expert_name=Factory.Dir.WebSearchXpert),
+        ]
+    
+    
+    # Run
+    chat = ChatMoE(verbose=Debug.Verbosity.low)
     user_input = input('user: ')
     state = chat.invoke({
             'input': user_input,

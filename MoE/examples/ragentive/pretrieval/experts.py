@@ -3,7 +3,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 
 from moe.annotations.core import Expert
-from moe.prebuilt.ragentive.pretrieval.strategies import HydeStrategy, QueryAugmentationStrategy
+from moe.examples.ragentive.pretrieval.strategies import HydeStrategy, QueryAugmentationStrategy
 
 from dev_tools.enums.llms import LLMs
 

@@ -1,7 +1,7 @@
 from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 
 from moe.annotations.core import Expert
-from moe.prebuilt.ragentive.postrieval.strategies import ContextStrategy, RerankingStrategy
+from moe.examples.ragentive.postrieval.strategies import ContextStrategy, RerankingStrategy
 
 from RAG.postrieval.cross_encoding_reranker import CrossEncodingReranker
 

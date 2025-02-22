@@ -13,7 +13,7 @@ if not os.environ.get('ENV'):
 
 from moe.annotations.core import ForceFirst, MoE
 from moe.default.strategies import DefaultMoEStrategy
-from moe.prebuilt.ragentive.modular.experts import Factory
+from moe.examples.ragentive.modular.experts import Factory
 
 if __name__ == '__main__':
     # Define MoE

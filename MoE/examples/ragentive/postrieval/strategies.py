@@ -5,11 +5,6 @@ from moe.base.strategies import BaseExpertStrategy
 
 from agents.parsers.generic import StringParser
 
-class RouterStrategy(BaseExpertStrategy):
-    def execute(self, expert, state) -> dict[str, Any]:
-        output = expert.invoke(state)
-        return {'expert_output': output}
-
 
 class RerankingStrategy(BaseExpertStrategy):
     def execute(self, expert, state) -> dict[str, Any]:
