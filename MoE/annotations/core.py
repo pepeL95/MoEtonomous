@@ -5,7 +5,6 @@ from moe.prebuilt.router.moe import AutonomousRouter
 from langchain_core.runnables import RunnableLambda
 
 
-
 def Expert(strategy=DefaultExpertStrategy):
     """Decorator to convert a class into an expert with the given strategy."""
     if not callable(strategy):
