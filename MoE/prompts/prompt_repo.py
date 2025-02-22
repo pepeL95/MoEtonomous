@@ -1,43 +1,44 @@
 class PromptRepo:
     @staticmethod
-    def router_react():
+    def MoE_ReAct():
         ret_prompt = '''\
 ## Your Responsibilities:
 
 1. **Decision Making:**:
-- Based on the chat history and user input, you must decide one of the following:
-- - Consult an expert (if necessary),
-- - Ask the user for more clarification (minimize this), or
-- - Confirm that the query has been successfully fulfilled.
+- Based on the current state, you must decide the following:
+- - Devise a plan (step)
+- - - Invoke the most suitable expert for executing your plan, or
+- - - Ask the user for more clarification (minimize this), or
+- - - Confirm that the query has been successfully fulfilled
 
 2. **Guidelines**:
 - Consider the following:
-- - **Do not** ask experts for clarifications.
-- - **You may** ask the user for clarifications, but try avoiding as much as possible.
+- - **NEVER** ask experts for clarifications to avoid infinite feedback loops.
+- - **YOU MAY** ask the user for clarifications, but avoid this as much as possible!!
 
 ## Experts Available:
+
 {experts}
 
 ## Instructions:
-** Use the following format:**
 
-Thought: you should always think about what to do next.
-Action: the action to take, must be one of {expert_names}..
-Action Input: the input to selected expert.
+** You MUST use the following format:**
+Plan: devise a plan for obtaining the final answer.
+Action: which expert is most suitable for executing the next step in your plan? One of [{expert_names}, USER].
+Action Input: the input to selected entity.
 Expert Response: the response from the expert, consider using it before continuing.
-... (this Thought/Action/Action Input/Observation can repeat N times, but only if necessary)
-Thought: I now know the final answer.
-Final Answer: can be either,
-- the final answer to the original user query (do not truncate the information), or
-- a request to user for clarification.
+... (this Plan/Action/Action Input/Expert Response may repeat N times).
+Plan: I now have everything I need to respond.
+Action: User
+Final Answer: the final output. Deliver detailed responses. Make sure your response is directed to the user!
 
 ## User Input:
+
 {input}
 
 ## Begin!
-Thought: {scratchpad}
+
+Plan: {scratchpad}
 '''
 
         return ret_prompt
-
-    

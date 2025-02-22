@@ -1,10 +1,21 @@
-from langchain_core.runnables import Runnable
+from typing import Optional
 
-class Expert:
-    def __init__(self, agent:Runnable, description:str, name:str) -> None:
+from agents.base.agent import BaseAgent
+
+from langchain_core.runnables import Runnable, RunnableConfig
+
+from moe.base.strategies import BaseExpertStrategy
+
+
+class BaseExpert:
+    def __init__(self, agent: BaseAgent | Runnable, description: str, name: str, strategy: BaseExpertStrategy) -> None:
         self.name = name
-        self.description = description
         self.agent = agent
+        self.strategy = strategy
+        self.description = description
 
-    def invoke(self, input):
-        return self.agent.invoke(input)
+    def invoke(self, input, config: Optional[RunnableConfig] = None):
+        return self.agent.invoke(input, config=config)
+
+    def execute_strategy(self, state):
+        return self.strategy.execute(expert=self, state=state)
