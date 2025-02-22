@@ -41,7 +41,7 @@ class State(TypedDict):
 
 - Should contain your expert classes
 - Expert classes are classes annotaded with the `@Expert` (or `@MoE` if your expert itself is an MoE) annotations
-- You **MUST** have a static `agent` under your class annotated with `@Expert`, which should extend `Agent` or `Runnable` in general
+- You **MUST** have a static `agent` under your class annotated with `@Expert`, which should extend `BaseAgent` or `Runnable` in general
 - **Recommended:** *Use a factory pattern for ease of use when building your MoE*
 
 ```python
