@@ -114,7 +114,6 @@ class GenXpertStrategy(BaseExpertStrategy):
 ```python
 from dev_tools.enums.llms import LLMs
 from moe.config.debug import Debug
-from moe.base.mixture import MoEBuilder
 from moe.annotations.core import MoE, Autonomous
 from moe.default.strategies import DefaultMoEStrategy
 from ...custom_moe.experts import Factory # Here is where the Factory comes in handy (e.g. imagine having many experts)
