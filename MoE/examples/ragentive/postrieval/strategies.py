@@ -7,18 +7,20 @@ from agents.parsers.generic import StringParser
 
 
 class RerankingStrategy(BaseExpertStrategy):
-    def execute(self, expert, state) -> dict[str, Any]:
-        if not 'context' in state['kwargs']:
+    def execute(self, expert, state:BaseMoE.State) -> dict[str, Any]:
+        if not 'contexts' in state['kwargs']:
             raise ValueError('Context documents not provided to the reranker')
 
-        # Top k documents per query, where k is defined at expert init time
         outputs = set()
-        for q_, docs in zip(state['kwargs']['enhanced_queries'], state['kwargs']['context']):
+        # For each enhanced query, rerank docs w.r.t enhanced queries
+        for i, query in enumerate(state['kwargs']['enhanced_queries']):
             local_outputs = expert.invoke({
-                'input': q_,
-                'context': docs,
+                'input': query,
+                'context': state['kwargs']['contexts'][i],
             })
+
             outputs.update(local_outputs)
+
 
         state['kwargs']['context'] = StringParser.from_langdocs(list(outputs))
         state['expert_output'] = state['kwargs']['context']

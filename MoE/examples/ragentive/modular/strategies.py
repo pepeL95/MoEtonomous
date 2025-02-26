@@ -24,7 +24,7 @@ class RetrievalStrategy(BaseExpertStrategy):
             outputs.append(relevant_docs)
 
         state['expert_output'] = 'Successfully retrieved relevant documents.'
-        state['kwargs']['context'] = outputs
+        state['kwargs']['contexts'] = outputs
         state['next'] = 'Postrieval'
         return state
 
