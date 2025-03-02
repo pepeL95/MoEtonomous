@@ -9,4 +9,6 @@ class DefaultMoEStrategy(BaseMoEStrategy):
 class DefaultExpertStrategy(BaseExpertStrategy):
     def execute(self, expert, state):
         output = expert.invoke(state)
-        return {'expert_output': output}
+        state['expert_output'] = output
+        state['next'] = self.next
+        return state

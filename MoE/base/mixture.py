@@ -21,6 +21,7 @@ class BaseMoE:
         next: str
         prev: str
         input: str
+        output: any
         expert_input: str
         expert_output: str
         router_scratchpad: str
@@ -107,11 +108,11 @@ class BaseMoE:
             raise TypeError(f"Router must be an instance of Union[MoE, Expert]. Got {type(self.router)}")
 
         # Next state must be valid
-        if state['next'] not in self.experts.keys() | {self.router.name, '__end__'}:
-            raise ValueError(f'Next state is not defined in the mixture. Must be one of {self.experts.keys()}, but got {state['next']}')
+        if state['next'] not in self.experts.keys() | {self.router.name, BaseMoE.FINISH, 'USER'}:
+            raise ValueError(f'Next state is not defined in the mixture. Must be one of {self.experts.keys() | {self.router.name, BaseMoE.FINISH, 'USER'}}, but got {state['next']}')
 
         # Avoid infinite loops
-        if state['next'] == state['prev'] or state['next'] is None:
+        if any([state['next'] == state['prev'], state['next'] == self.router.name, state['next'] is None]):
             state['next'] = self.router.name
 
         # If xpert decided where to go next, go there
@@ -138,8 +139,8 @@ class BaseMoE:
         state['router_scratchpad'] = output_map.get('router_scratchpad', state['router_scratchpad'])
 
         # Extract expert and expert input
-        output = output_map['expert_output']
-        xpert_name, xpert_input = self._parse_router_output(output)  # New plan + action + action input
+        router_output = output_map['expert_output']
+        xpert_name, xpert_input = self._parse_router_output(router_output)  # New plan + action + action input
 
         # Debug verbosity
         if self.verbose is Debug.Verbosity.high:
@@ -147,8 +148,8 @@ class BaseMoE:
             print_bold(f'Output: {CLIFont.blue}{output_map}\n')
 
         # Final answer?
-        if xpert_name == '__end__' or xpert_name == 'USER':
-            return {"next": '__end__', "expert_output": xpert_input, "router_scratchpad": output_map, "prev": self.router.name}
+        if xpert_name in {'USER', BaseMoE.FINISH}:
+            return {"next": BaseMoE.FINISH, "output": xpert_input, "router_scratchpad": output_map['scratchpad']}
 
         # Sanity check
         if xpert_name not in self.experts.keys():
@@ -159,7 +160,7 @@ class BaseMoE:
         state["next"] = xpert_name
         state["expert_input"] = xpert_input
         state["prev"] = self.router.name
-        state["router_scratchpad"] += f'\n{output}'
+        state["router_scratchpad"] += f'\n{router_output}'
 
         return state
 
@@ -171,15 +172,23 @@ class BaseMoE:
         if self.verbose > Debug.Verbosity.quiet:
             print_bold(f'Result: {CLIFont.purple}Calling `{xpert.name}` with input `{state['expert_input']}`\n')
 
-        update: dict = xpert.execute_strategy(state)
+        update: BaseMoE.State = xpert.execute_strategy(state)
 
         xpert_in = HumanMessage(content=state['expert_input'], role=state['prev'])
         xpert_out = AIMessage(content=update['expert_output'], role=xpert.name)
 
         update['prev'] = xpert.name
         update['ephemeral_mem'].add_messages([xpert_in, xpert_out])
+
+        # If an expert decided that we are done...
+        if state['next'] in {'USER', BaseMoE.FINISH}:
+            update['output'] = state['expert_output']
+            state['expert_output'] = "See state['output']"
+
+
         # Input to expert_(t+1) = expert_t
-        update['expert_input'] = update['expert_output']
+        else:
+            update['expert_input'] = update['expert_output']
 
         # Debug verbosity
         if self.verbose > Debug.Verbosity.quiet:

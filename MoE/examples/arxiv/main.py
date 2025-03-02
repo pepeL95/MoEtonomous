@@ -13,13 +13,13 @@ if not os.environ.get('ENV'):
 ###########################################################################
 
 from moe.examples.arxiv.experts import Factory
-from moe.annotations.core import MoE, ForceFirst 
+from moe.annotations.core import MoE, Deterministic 
 from moe.default.strategies import DefaultMoEStrategy
 
 if __name__ == '__main__':
     
     @MoE(DefaultMoEStrategy)
-    @ForceFirst('QbuilderXpert')
+    @Deterministic('QbuilderXpert')
     class ArxivMoE:
         '''This MoE fetches and summarizes articles from the Arxiv api, given a natural language query'''
         experts = [
@@ -35,4 +35,4 @@ if __name__ == '__main__':
         'input': user_input,
     })
 
-    print(state['expert_output'])
+    print(state['output'])

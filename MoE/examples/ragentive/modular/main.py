@@ -11,14 +11,14 @@ if not os.environ.get('ENV'):
 
 ###########################################################################
 
-from moe.annotations.core import ForceFirst, MoE
+from moe.annotations.core import Deterministic, MoE
 from moe.default.strategies import DefaultMoEStrategy
 from moe.examples.ragentive.modular.experts import Factory
 
 if __name__ == '__main__':
     # Define MoE
     @MoE(DefaultMoEStrategy)
-    @ForceFirst('Pretrieval')
+    @Deterministic('Pretrieval')
     class Ragentive:
         '''
         Sample implementation of a modular, agentive RAG pipeline.
