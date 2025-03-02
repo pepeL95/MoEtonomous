@@ -4,14 +4,14 @@ from langchain_chroma import Chroma
 from dev_tools.enums.embeddings import Embeddings
 
 from moe.base.mixture import BaseMoE
-from moe.annotations.core import Expert, ForceFirst, MoE
+from moe.annotations.core import Expert, Deterministic, MoE
 from moe.examples.ragentive.pretrieval.experts import Factory as PreFactory 
 from moe.examples.ragentive.postrieval.experts import Factory as PostFactory 
 from moe.examples.ragentive.modular.strategies import PostrievalStrategy, PretrievalStrategy, RetrievalStrategy
 
 
 @MoE(PretrievalStrategy)
-@ForceFirst('QueryAugmentationExpert')
+@Deterministic('QueryAugmentationExpert')
 class Pretrieval:
     '''A master at orchestrating the pre-retrieval step of a Retrieval Augmented Generation (RAG) pipeline. It returns a hypothetical answer that must be given to the PostrievalMoE.Use this expert at the beginning of the pipeline.'''
     experts = [
@@ -31,7 +31,7 @@ class Retrieval:
 
 
 @MoE(PostrievalStrategy)
-@ForceFirst('RerankingExpert')
+@Deterministic('RerankingExpert')
 class Postrieval(BaseMoE):
     '''Expert at coordinating the post-retrieval step of a Retrieval Augmented Generation (RAG) pipeline. Use this expert when the pre-retrival step is done. You may END after this expert has responded.'''
     experts = [

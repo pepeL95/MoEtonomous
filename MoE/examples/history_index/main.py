@@ -11,7 +11,7 @@ if not os.environ.get('ENV'):
 
 ###########################################################################
 
-from moe.annotations.core import MoE, ForceFirst
+from moe.annotations.core import MoE, Deterministic
 from moe.default.strategies import DefaultMoEStrategy
 from moe.examples.history_index.experts import IndexXpert, MetadataXpert, ResponseXpert, ThoughtXpert
 
@@ -20,7 +20,7 @@ from moe.examples.history_index.experts import IndexXpert, MetadataXpert, Respon
 def main():
     """Run Strategy"""
     @MoE(DefaultMoEStrategy)
-    @ForceFirst('ThoughtXpert')
+    @Deterministic('ThoughtXpert')
     class HistoryIndexMoE:
         '''Reasoning MoE'''
         experts = [
