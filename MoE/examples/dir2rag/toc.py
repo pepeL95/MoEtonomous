@@ -1,4 +1,5 @@
 from moe.examples.dir2rag.experts import linear_retry
+import fitz
 
 class TocNode:
     def __init__(self, level, title, page):
@@ -206,10 +207,30 @@ class Toc:
         """Invoke the section synthesizer agent and return the results, with a 1 second delay"""
         return agent.invoke({"input": content})
     
+    @linear_retry(max_retries=1000, delay=5)
+    def extract_metadata(self, doc: fitz.Document, agent):
+        """Invoke the document metadata extractor agent and return the results, with a 1 second delay"""
+        metadata = {
+            "title": None,
+            "authors": None,
+            "date": None
+        }
+
+        for pno in range(doc.page_count):
+            # If metadata all the metadatas are complete, break
+            if all(metadata.values()):
+                break
+            # Extract metadata from the page
+            content = doc.load_page(pno).get_text()
+            _metadata =agent.invoke({"input": content})
+            # Update metadata with the new non-None values
+            metadata = {k: v for k, v in _metadata.items() if k in metadata and v is not None}
+        
+        return metadata
+    
     # def summarize_toc(self, agent_sigma, agent_synth):
     #     """
     #     Recursively traverses the TOC tree and applies the function sigma to every node.
-        
     #     Parameters:
     #     toc (Toc): An instance of the Toc class.
     #     sigma (function): A function that takes a TocNode as its argument.
@@ -223,8 +244,6 @@ class Toc:
     #                 abstracts = [node.abstract for node in node.children]
     #                 abstracts.append(node.abstract)
     #                 node.abstract = self.synthesize_node('\n'.join(abstracts), agent_synth)
-                    
-        
     #     traverse_nodes(self.root_nodes, agent_sigma, agent_synth)
 
     def summarize_toc(self, agent_sigma, agent_synth):

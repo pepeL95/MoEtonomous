@@ -114,7 +114,28 @@ section_synth = EphemeralNLPAgent(
     )
 )
 
-
+metadata_xtractor = EphemeralNLPAgent(
+    name='MetadataExtractor',
+    llm=LLMs.Gemini(),
+    output_parser=JsonOutputParser(),
+    prompt_template=(
+        'Extract the following metadata from the provided text if it exists.\n\n'
+        '**Metadata**\n'
+        'title: Title of the document\n'
+        'authors: Authors of the document\n'
+        'date: Date of the document\n\n'
+        '**Input**\n'
+        '{input}\n\n'
+        '**Output**\n'
+        'Output only the metadata in the following format (if some metadata is not present, '
+        'return None for the corresponding value).\n'
+        '{{'
+        '"title": <"Title of the document" or None>, '
+        '"authors": <"Authors of the document" or None>, '
+        '"date": <"Date of the document" or None>'
+        '}}'
+    )
+)
 
 
 def linear_retry(max_retries=3, delay=1):
