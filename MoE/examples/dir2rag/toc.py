@@ -1,6 +1,4 @@
-import fitz  # PyMuPDF
-from agents import linear_retry
-
+from moe.examples.dir2rag.experts import linear_retry
 
 class TocNode:
     def __init__(self, level, title, page):
@@ -193,20 +191,20 @@ class Toc:
         return "\n".join(markdown_lines)
     
     @linear_retry(max_retries=1000, delay=5)
-    def summarize_node(self, node, agent):
+    def summarize_node(self, title, content, agent):
         """Invoke the section summarizer agent and return the results, with a 1 second delay"""
         payload = {
             "table_of_contents": self.to_markdown(),
-            "section_title": node.title,
-            "content": node.content 
+            "section_title": title,
+            "content": content
         }
         
         return agent.invoke({"input": payload})
     
     @linear_retry(max_retries=1000, delay=5)
-    def synthesize_node(self, node, agent):
+    def synthesize_node(self, content, agent):
         """Invoke the section synthesizer agent and return the results, with a 1 second delay"""
-        return agent.invoke({"input": node.content})
+        return agent.invoke({"input": content})
     
     def summarize_toc(self, agent_sigma, agent_synth):
         """
@@ -218,9 +216,13 @@ class Toc:
         """
         def traverse_nodes(nodes, agent_sigma, agent_synth):
             for node in nodes:
-                node.content = self.summarize_node(node, agent_sigma)
-                node.abstract = self.synthesize_node(node, agent_synth)
+                node.content = self.summarize_node(node.title, node.content, agent_sigma)
+                node.abstract = self.synthesize_node(node.content, agent_synth)
                 if node.children:
                     traverse_nodes(node.children, agent_sigma, agent_synth)
+                    abstracts = [node.abstract for node in node.children]
+                    abstracts.append(node.abstract)
+                    node.abstract = self.synthesize_node('\n'.join(abstracts), agent_synth)
+                    
         
         traverse_nodes(self.root_nodes, agent_sigma, agent_synth)

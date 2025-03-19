@@ -55,7 +55,7 @@ def show_pdf(file_bytes):
 st.title("PDF Browser and Reader")
 
 # Preconfigured PDF directory
-pdf_directory = "path/to/pdf/directory"
+pdf_directory = "/Users/pepelopez/Documents/Learning/Genai/Papers"
 
 if pdf_directory and os.path.isdir(pdf_directory):
     # Compute the directory stamp to include in the cache key

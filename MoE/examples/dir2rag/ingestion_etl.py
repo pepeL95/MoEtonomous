@@ -1,7 +1,20 @@
+############################# SYS PATH LOAD ################################
+
+from dotenv import load_dotenv
+import sys
+import os
+
+
+if not os.environ.get('ENV'):
+    print('Setting up env')
+    load_dotenv(os.environ["RND_ENV_CONFIG_PATH"])  # .env file path
+    sys.path.append(os.environ.get('SRC'))
+
+###########################################################################
+
 import fitz  # PyMuPDF
-from utils import Toc
-from agents import section_summarizer
-from agents import section_synth
+from moe.examples.dir2rag.toc import Toc
+from moe.examples.dir2rag.experts import section_summarizer, section_synth
 
 
 
@@ -23,3 +36,6 @@ class ETLDocIngestion:
 
 
 
+if __name__ == "__main__":
+    etl = ETLDocIngestion.extract_toc("/Users/pepelopez/Documents/Learning/Genai/Papers/openelm.pdf")
+    etl.toc_tree.to_markdown()
