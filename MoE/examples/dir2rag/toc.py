@@ -206,23 +206,50 @@ class Toc:
         """Invoke the section synthesizer agent and return the results, with a 1 second delay"""
         return agent.invoke({"input": content})
     
-    def summarize_toc(self, agent_sigma, agent_synth):
-        """
-        Recursively traverses the TOC tree and applies the function sigma to every node.
+    # def summarize_toc(self, agent_sigma, agent_synth):
+    #     """
+    #     Recursively traverses the TOC tree and applies the function sigma to every node.
         
-        Parameters:
-        toc (Toc): An instance of the Toc class.
-        sigma (function): A function that takes a TocNode as its argument.
-        """
-        def traverse_nodes(nodes, agent_sigma, agent_synth):
-            for node in nodes:
-                node.content = self.summarize_node(node.title, node.content, agent_sigma)
-                node.abstract = self.synthesize_node(node.content, agent_synth)
-                if node.children:
-                    traverse_nodes(node.children, agent_sigma, agent_synth)
-                    abstracts = [node.abstract for node in node.children]
-                    abstracts.append(node.abstract)
-                    node.abstract = self.synthesize_node('\n'.join(abstracts), agent_synth)
+    #     Parameters:
+    #     toc (Toc): An instance of the Toc class.
+    #     sigma (function): A function that takes a TocNode as its argument.
+    #     """
+    #     def traverse_nodes(nodes, agent_sigma, agent_synth):
+    #         for node in nodes:
+    #             node.content = self.summarize_node(node.title, node.content, agent_sigma)
+    #             node.abstract = self.synthesize_node(node.content, agent_synth)
+    #             if node.children:
+    #                 traverse_nodes(node.children, agent_sigma, agent_synth)
+    #                 abstracts = [node.abstract for node in node.children]
+    #                 abstracts.append(node.abstract)
+    #                 node.abstract = self.synthesize_node('\n'.join(abstracts), agent_synth)
                     
         
+    #     traverse_nodes(self.root_nodes, agent_sigma, agent_synth)
+
+    def summarize_toc(self, agent_sigma, agent_synth):
+        """
+        Recursively traverses the TOC tree and applies summarization and synthesis to each node.
+        
+        Parameters:
+            agent_sigma: Agent for summarizing individual sections
+            agent_synth: Agent for synthesizing summaries into abstracts
+        """
+        def traverse_nodes(nodes, agent_sigma, agent_synth):
+            """
+            Recursively process nodes, generating summaries and abstracts.
+            Returns list of abstracts from processed nodes.
+            """
+            abstracts = []
+            for node in nodes:
+                node.content = self.summarize_node(node.title, node.content, agent_sigma)
+                if node.children:
+                    children_abstracts = traverse_nodes(node.children, agent_sigma, agent_synth)
+                    combined_content = '\n\n'.join([node.content] + children_abstracts)
+                    node.abstract = self.synthesize_node(combined_content, agent_synth)
+                else:
+                    node.abstract = self.synthesize_node(node.content, agent_synth)        
+                abstracts.append(node.abstract)
+            return abstracts
+
         traverse_nodes(self.root_nodes, agent_sigma, agent_synth)
