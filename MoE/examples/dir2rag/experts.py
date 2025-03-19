@@ -128,11 +128,11 @@ metadata_xtractor = EphemeralNLPAgent(
         '{input}\n\n'
         '**Output**\n'
         'Output only the metadata in the following format (if some metadata is not present, '
-        'return None for the corresponding value).\n'
+        'return null for the corresponding value).\n'
         '{{'
-        '"title": <"Title of the document" or None>, '
-        '"authors": <"Authors of the document" or None>, '
-        '"date": <"Date of the document" or None>'
+        '"title": <"Title of the document" or null>, '
+        '"authors": <"Authors of the document" or null>, '
+        '"date": <"Date of the document" or null>'
         '}}'
     )
 )
