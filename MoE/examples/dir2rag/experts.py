@@ -3,7 +3,7 @@ import time
 from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 from dev_tools.enums.llms import LLMs
 from langchain_core.output_parsers import JsonOutputParser
-
+from langchain_google_genai.chat_models import ChatGoogleGenerativeAIError
 
 
 semex = EphemeralNLPAgent(
@@ -156,11 +156,15 @@ def linear_retry(max_retries=3, delay=1):
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
-                    retries += 1
-                    if retries == max_retries:
+                    if isinstance(e, ChatGoogleGenerativeAIError) and '429' in str(e):
+                        retries += 1
+                        if retries == max_retries:
+                            raise e
+                        print(f"Attempt {retries} failed: {e}. Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                    else:
+                        print(f"Attempt {retries} failed: {e}. Continuing the ETL...")
                         raise e
-                    print(f"Attempt {retries} failed: {e}. Retrying in {delay} seconds...")
-                    time.sleep(delay)
             return None
         return wrapper
     return decorator

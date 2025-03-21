@@ -260,15 +260,19 @@ class Toc:
             Returns list of abstracts from processed nodes.
             """
             abstracts = []
-            for node in nodes:
-                node.content = self.summarize_node(node.title, node.content, agent_sigma)
-                if node.children:
-                    children_abstracts = traverse_nodes(node.children, agent_sigma, agent_synth)
-                    combined_content = '\n\n'.join([node.content] + children_abstracts)
-                    node.abstract = self.synthesize_node(combined_content, agent_synth)
-                else:
-                    node.abstract = self.synthesize_node(node.content, agent_synth)        
-                abstracts.append(node.abstract)
+            for i, node in enumerate(nodes):
+                try:
+                    node.content = self.summarize_node(node.title, node.content, agent_sigma)
+                    if node.children:
+                        children_abstracts = traverse_nodes(node.children, agent_sigma, agent_synth)
+                        combined_content = '\n\n'.join([node.content] + children_abstracts)
+                        node.abstract = self.synthesize_node(combined_content, agent_synth)
+                    else:
+                        node.abstract = self.synthesize_node(node.content, agent_synth)        
+                    abstracts.append(node.abstract)
+                except Exception as e:
+                    print(f"Error processing node {node.title}: {e}. Check your GPT que se te exploto.")
+                    break
             return abstracts
 
         traverse_nodes(self.root_nodes, agent_sigma, agent_synth)
