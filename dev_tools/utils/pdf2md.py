@@ -366,13 +366,11 @@ class Pdf2Markdown:
             suffix = block[i + 2]  # vector
             
             # Ignore breaklines
-            if curr['text'].strip() == '</BR>':
+            if curr['text'].strip() in loi.union('<end_of_block>'):
                 curr['entropy'] = 0.0
                 continue
-
-            # Remove '*' characters from text and strip extra whitespace
+            
             text = ''.join(curr['text'].split('*')).strip()
-            # This function presumably calculates an initial heading candidate score
             title_score = self._score_heading_candidate(text)
 
             # Good candidate if preceded by </BR> or <start_of_block>
@@ -386,14 +384,15 @@ class Pdf2Markdown:
                     suffix.get('size', 0.0),
                     suffix.get('weight', 0.0),
                 ], dtype=np.float32)
+                
+                # Dot prod similarity
+                norm2 = round(np.linalg.norm(v0) ** 2, 2)
+                dot = round(float(np.dot(v0, v1)), 2)
+                sim = dot / norm2
 
-                # Guard against zero norms
-                norm_v0 = np.linalg.norm(v0)
-                norm_v1 = np.linalg.norm(v1)
-                if norm_v0 == 0.0 or norm_v1 == 0.0:
-                    sim = 0.0
-                else:
-                    sim = float(np.dot(v0, v1) / (norm_v0 * norm_v1))
+                if text == '1. Introduction':
+                    print(curr)
+                    print(suffix)
 
                 # If highly similar, treat current line as paragraph text 
                 # Note: We exclude fully consecutive bolded lines, since those are likely headings
