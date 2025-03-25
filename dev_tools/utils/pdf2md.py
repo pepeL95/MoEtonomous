@@ -76,13 +76,15 @@ class Pdf2Markdown:
 
     ########################## PUBLIC METHODS ##################################
 
-    def get_toc(self, pretty=False):
+    def get_toc(self, llm=None, pretty=False):
         if self._has_toc():
             print_bold(f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
             return self._xtract_toc(pretty)
         else:
+            if llm is None:
+                raise ValueError("llm is required when PDF has no ToC")
             print_bold(f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
-            return self._gen_toc(pretty)
+            return self._gen_toc(llm, pretty)
     
     def parse(self, pca=0):
         toc, _ = self._cluster_fonts(pca)
