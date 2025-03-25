@@ -107,19 +107,10 @@ class Pdf2Markdown:
     
     def generate(self, llm, pca=0) -> str:
         toc = self._generate_toc(llm, pca=pca)
-        # 1. Collect unique font sizes from the ToC.
-        font_sizes = {self.dfoc.at[entry['line_number'], 'size'] for entry in toc}
-        # 2. Sort font sizes in descending order and assign ranks
-        sizes_sorted = sorted(font_sizes, reverse=True)
-        level_map = {fs: i+2 for i, fs in enumerate(sizes_sorted)} # starts at <h2>
-        # 3. Insert appropriate headings into the lines list based on ToC info
         for entry in toc:
             ln = entry["line_number"]
-            fs = self.dfoc.at[entry['line_number'], 'size']
-            hierarchy = "#" * level_map[fs]
-            self.dfoc.loc[ln, 'text'] = f"\n{hierarchy} {''.join(self.dfoc.loc[ln, 'text'].split('**'))}\n"
-
-        # Now lines has updated heading markers where needed.
+            level = entry['level'] + 1 # Starts at <h2>
+            self.dfoc.loc[ln, 'text'] = f"\n{level * '#'} {''.join(self.dfoc.loc[ln, 'text'].split('**'))}\n"
         return '\n'.join(self.dfoc['text'].to_list())
 
     def run_etl(self, dropna=False):
@@ -150,23 +141,16 @@ class Pdf2Markdown:
     
     def _gen_toc(self, llm, pretty=False):
         toc_entries = self._generate_toc(llm, pca=0)
-        head_rows = self.dfoc.loc[[entry['line_number'] for entry in toc_entries]]
-        
-        font_sizes = head_rows['size'].unique()
-        sizes_sorted = sorted(font_sizes, reverse=True)
-        level_map = {size: lvl+1 for lvl, size in enumerate(sizes_sorted)}
-        
         toc = []
-        for _, row in head_rows.iterrows():
-            level = level_map[row['size']]
-            text = ''.join(row['text'].split('*'))
-            page = row['page']
-            toc.append((level, text, page))
+        for entry in toc_entries:
+            level = entry['level']
+            title = entry['text']
+            page = entry['page']
+            toc.append((level, title, page))
         
         if pretty:
             lines = []
             for entry in toc:
-                # 'level' indicates the depth of the entry in the TOC
                 level = entry[0]
                 title = entry[1]
                 page = entry[2] # page
@@ -174,10 +158,11 @@ class Pdf2Markdown:
             return os.linesep.join(lines)
         return toc
         
+        
     def _generate_toc(self, llm, pca=0) -> List[Dict[str, any]]:
         toc_cluster, _ = self._cluster_fonts(pca)
         docs = [
-            f"{i}: {{'text': {doc}, 'font_size': {toc_cluster.at[i, 'size']}}}"
+            f"{i}: {{'text': {doc}, 'font_size': {toc_cluster.at[i, 'size']}, 'page': {int(toc_cluster.at[i, 'page'])}}}"
             for i, doc in toc_cluster['text'].items()
             if i in toc_cluster.index and doc != '</BR>'
         ]
@@ -204,6 +189,9 @@ class Pdf2Markdown:
                 "Return a JSON as follows:\n"
                 "- `\"line_number\"`: the original line index in the PDF extraction (an integer)\n"
                 "- `\"text\"`: the text of the heading (a string).\n"
+                "- \"level\": the nested hierarchy determined by you\n"
+                "- \"page\": the page number of the heading/subheading"
+
             ),
         )
 
