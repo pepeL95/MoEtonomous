@@ -14,6 +14,30 @@ class Gemini(Singleton):
     def __init__(self):
         self.model = ChatGoogleGenerativeAI(model="gemini-1.5-flash-002", temperature=0)
         
+class GeminiXP(Singleton):
+    """Gemini model initialized as a singleton."""
+
+    def __init__(self):
+        self.model = ChatGoogleGenerativeAI(model="gemini-2.0-pro-exp-02-05", temperature=0)
+        
+class Gemma327bIt(Singleton):
+    """Gemma327bIt model initialized as a singleton."""
+
+    def __init__(self):
+        self.model = ChatGoogleGenerativeAI(model="gemma-3-27b-it", temperature=0)
+        
+class Gemini15Flash8b(Singleton):
+    """Gemini15Flash8b model initialized as a singleton."""
+
+    def __init__(self):
+        self.model = ChatGoogleGenerativeAI(model="gemini-1.5-flash-8b", temperature=0)
+        
+class Gemini2FlashLite(Singleton):
+    """Gemini2FlashLite model initialized as a singleton."""
+
+    def __init__(self):
+        self.model = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite", temperature=0)
+        
 class Phi3(Singleton):
     """Phi3 model initialized as a singleton."""
 
@@ -168,6 +192,10 @@ class DeepSeekLlama(Singleton):
 class LLMs(Enum):
     DeepSeekLlama = DeepSeekLlama
     Gemini = Gemini
+    GeminiXP = GeminiXP
+    Gemma327bIt = Gemma327bIt
+    Gemini15Flash8b = Gemini15Flash8b
+    Gemini2FlashLite = Gemini2FlashLite
     Phi3 = Phi3
     Phi35 = Phi35
     Gemma2Plus = Gemma2Plus

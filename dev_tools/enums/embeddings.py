@@ -52,3 +52,31 @@ class Embeddings(Enum):
 
     def __call__(self):
         return self.value().ef
+
+class KeyRotatorEmbedder:
+    """
+    A wrapper around GoogleGenerativeAIEmbeddings that rotates among a list of API keys (licenses).
+    This class attempts to generate embeddings using the current API key and, if an exception occurs (for example, due to rate limits or license issues), rotates to the next API key and retries.
+    """
+    def __init__(self, api_keys: list, embedding_model):
+        if not api_keys:
+            raise ValueError("At least one API key must be provided.")
+        self.api_keys = api_keys
+        self.embedding_model = embedding_model
+        self.index = 0
+
+    def rotate_key(self):
+        """Rotates to the next API key in the list and updates the embedder."""
+        self.index = (self.index + 1) % len(self.api_keys)
+
+    def embed_documents(self, texts: list) -> list:
+        """
+        Generates embeddings for a list of documents using the current API key.
+        If an exception occurs (e.g., due to license issues), rotates the key and retries once.
+        """
+        try:
+            return self.embedding_model.embed_documents(texts)
+        except Exception as e:
+            # Optionally, log the exception here
+            self.rotate_key()
+            return self.embedding_model.embed_documents(texts)
