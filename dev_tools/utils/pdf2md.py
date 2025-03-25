@@ -307,10 +307,10 @@ class Pdf2Markdown:
         token_count = len(tokens)
         word_count = len(words)
         
-        if word_count / token_count < 0.5:
+        if not words or len(string.strip()) < 3:
             return 0.0
         
-        if not words or len(string.strip()) < 3:
+        if word_count / token_count < 0.5:
             return 0.0
 
         # Length-based scoring
@@ -335,12 +335,6 @@ class Pdf2Markdown:
             score += 0.2
         elif not not words[0][0].isupper():  # First word *not* capitalized
             score -= 0.6
-            
-        # Academic papers heading-specific terms
-        heading_terms = {'Introduction', 'Conclusion', 'Summary', 'Abstract', 'Background', 'Method', 'Results', 'Discussion', 'References', 'Appendix', 'Related Works'}
-        heading_terms_capped = {'INTRODUCTION', 'CONCLUSION', 'SUMMARY', 'ABSTRACT', 'BACKGROUND', 'METHOD', 'DISCUSSION', 'RESULTS', 'APPENDIX', 'REFERENCES', 'RELATED WORKS'}
-        if any(word in heading_terms or word in heading_terms_capped for word in words):
-            score += 0.9
             
         # Penalize sentence-ending punctuation
         if re.search(r'[.,;:]$', clean_str):
@@ -467,7 +461,7 @@ class Pdf2Markdown:
         def is_italic(span):
             if span['text'].strip() in {'</BR>', '!'}: # Note '!' is a special character for unknown ascii codes
                 return True
-            return any(bold_match in span['font'] for bold_match in ["oblique", "CMTI", "CMMI"]) 
+            return any(bold_match in span['font'] for bold_match in ["oblique", "CMTI", "CMMI", "Ital"]) 
 
         
         # Handle breaklines
