@@ -390,10 +390,6 @@ class Pdf2Markdown:
                 dot = round(float(np.dot(v0, v1)), 2)
                 sim = dot / norm2
 
-                if text == '1. Introduction':
-                    print(curr)
-                    print(suffix)
-
                 # If highly similar, treat current line as paragraph text 
                 # Note: We exclude fully consecutive bolded lines, since those are likely headings
                 if sim == 1.0 and not suffix.get('bold', 0.0):
