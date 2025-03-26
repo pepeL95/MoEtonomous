@@ -77,6 +77,14 @@ class Pdf2Markdown:
 
     ########################## PUBLIC METHODS ##################################
 
+    def invoke(self, llm, pca=0):
+        if self._has_toc():
+            print_bold(f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
+            return self.parse(pca)
+        else:
+            print_bold(f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
+            return self.generate(llm, pca)
+        
     def get_toc(self, llm=None, pretty=False):
         if self._has_toc():
             print_bold(f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
@@ -86,14 +94,16 @@ class Pdf2Markdown:
                 raise ValueError("llm is required when PDF has no ToC")
             print_bold(f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
             return self._gen_toc(llm, pretty)
-    
+
     def parse(self, pca=0):
-        _, df = self._cluster_fonts(pca)
         toc_entries = self._xtract_toc()
+        print_bold(f"{CLIFont.light_green}Not using LLM...{CLIFont.reset}")
+        _, df = self._cluster_fonts(pca)
         matches = self._fuzzy_match(df, toc_entries)
         # replace the text of the lines with the matched text
-        for i, row in matches.iterrows():
+        for _, row in matches.iterrows():
             self.dfoc.at[row['index'], 'text'] = row['text']
+
         return '\n'.join(self.dfoc['text'].to_list())
     
     def generate(self, llm, pca=0) -> str:
@@ -137,7 +147,7 @@ class Pdf2Markdown:
                 if not idx.empty:
                     matches.append({
                         'index': idx[0],
-                        'level': level,
+                        'level': level + 1, # starts at <h2>
                         'text': f"{level * '#'} {''.join(matched_text.split('*'))}",
                         'page': toc_page,
                         'similarity': match[1]/100
