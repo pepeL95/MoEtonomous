@@ -477,6 +477,8 @@ class Pdf2Markdown:
         line_vector['weight'] = line_vector['bold'] + line_vector['italics']
         line_vector['bboxh'] = np.log(abs(line_vector['bbox'][1] - line_vector['bbox'][3]))
         line_vector['ignore'] = self._ignore_bboxes(line_vector, mask_bboxes)
+        if line_vector['text'][0] == '#':
+            line_vector['text'] = f"`{line_vector['text']}`"
         if line_vector['bold'] and line_vector['text'] != '</BR>':
             line_vector['text'] = f"**{line_vector['text']}**"
         if line_vector['italics'] and line_vector['text'] != '</BR>':
