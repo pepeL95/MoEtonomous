@@ -97,7 +97,6 @@ class Pdf2Markdown:
 
     def parse(self, pca=0):
         toc_entries = self._xtract_toc()
-        print_bold(f"{CLIFont.light_green}Not using LLM...{CLIFont.reset}")
         _, df = self._cluster_fonts(pca)
         matches = self._fuzzy_match(df, toc_entries)
         # replace the text of the lines with the matched text
@@ -221,8 +220,8 @@ class Pdf2Markdown:
                 "Return a JSON as follows:\n"
                 "- `\"line_number\"`: the original line index in the PDF extraction (an integer)\n"
                 "- `\"text\"`: the text of the heading (a string).\n"
-                "- \"level\": the nested hierarchy determined by you\n"
-                "- \"page\": the page number of the heading/subheading"
+                "- `\"level\"`: the nested hierarchy determined by you\n"
+                "- `\"page\"`: the page number of the heading/subheading"
 
             ),
         )
@@ -271,7 +270,6 @@ class Pdf2Markdown:
         
         # Feature scaling...
         scaler = MinMaxScaler(feature_range=(0,1))
-        # scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
         df = pd.DataFrame(data=X_scaled, columns=features)
 
@@ -289,7 +287,6 @@ class Pdf2Markdown:
         
         # Kmeans
         kmeans = KMeans(n_clusters=2, random_state=42)
-        # kmeans = DBSCAN(eps=0.7, min_samples=5)
         clusters = kmeans.fit_predict(df_pca if df_pca is not None else data)
         return clusters
     
@@ -376,26 +373,22 @@ class Pdf2Markdown:
             """Weighted sum of features."""
             if any([title_score == 0.0, is_first == 0.0]):
                 return 0.0
-            return round(title_score + weight * 0.5 + (size * 0.1), 2)
+            return round(title_score + weight * 0.5 + size * 0.1, 2)
 
-        # Process remaining elements (sliding window = 3)
+        # Identify potential heading lines (sliding window = 3)
         loi = {'</BR>', '<start_of_block>'}
         for i in range(len(block) - 2):
             curr = block[i + 1]  # vector
             prefix = block[i]['text'].strip()  # string
             suffix = block[i + 2]  # vector
-            
-            # Ignore breaklines
+
+            # Ignore unimporant lines
             if curr['text'].strip() in loi.union('<end_of_block>'):
                 curr['entropy'] = 0.0
                 continue
             
-            text = ''.join(curr['text'].split('*')).strip()
-            title_score = self._score_heading_candidate(text)
-
             # Good candidate if preceded by </BR> or <start_of_block>
             if prefix in loi:
-                # Build feature vectors safely
                 v0 = np.array([
                     curr.get('size', 0.0),
                     curr.get('weight', 0.0),
@@ -405,25 +398,36 @@ class Pdf2Markdown:
                     suffix.get('weight', 0.0),
                 ], dtype=np.float32)
                 
-                # Dot prod similarity
+                # Dot product similarity
                 norm2 = round(np.linalg.norm(v0) ** 2, 2)
                 dot = round(float(np.dot(v0, v1)), 2)
                 sim = dot / norm2
 
-                # If highly similar, treat current line as paragraph text 
-                # Note: We exclude fully consecutive bolded lines, since those are likely headings
-                if sim == 1.0 and not suffix.get('bold', 0.0):
-                    curr['start'] = curr.get('start', 0.0)
+                # If equal syntactically, treat current line as paragraph text 
+                if sim == 1.0:
+                    # Note: We exclude fully consecutive bolded lines, since those are good headings candidates
+                    if suffix.get('bold', 0.0):
+                        curr['text'] = f"{curr['text']} {suffix['text']}"
+                        curr['start'] = 1.0
+                        suffix['text'] = ''
+                    else:
+                        curr['start'] = curr.get('start', 0.0)
+                
+                # If highly similar (i.e. not same) but bolded, treat both as heading
+                elif sim > 0.8 and suffix.get('bold', 0.0):
+                    curr['start'] = 1.0
+                    suffix['start'] = 1.0
+
                 # Otherwise, mark it as a start (e.g., heading)
                 else:
-                    curr['start'] = max(curr.get('start', 0.0), 1.0)
+                    curr['start'] = 1.0
             else:
                 # Not preceded by <start_of_block>
                 curr['start'] = curr.get('start', 0.0)
 
             # Final heading entropy score
             curr['entropy'] = predict(
-                title_score,
+                curr.get('entropy', 0.0),
                 curr.get('weight', 0.0),
                 curr.get('size', 0.0),
                 curr.get('start', 0.0)
