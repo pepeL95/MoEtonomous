@@ -4,8 +4,9 @@ import fitz
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
+from rapidfuzz import fuzz, process
 from sklearn.decomposition import PCA
-from typing import List, TypedDict, Dict, Union
+from typing import List, Tuple, TypedDict, Dict, Union
 from dev_tools.utils.clifont import print_bold, CLIFont
 from langchain_core.output_parsers import JsonOutputParser
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
@@ -87,22 +88,12 @@ class Pdf2Markdown:
             return self._gen_toc(llm, pretty)
     
     def parse(self, pca=0):
-        toc, _ = self._cluster_fonts(pca)
-        pfs = self.dfoc[self.dfoc['size'] > 0 ]['size'].mode()[0]
-        toc = toc[toc['size'] > pfs]
-        # 1. Collect unique font sizes from the ToC.
-        font_sizes = toc['size'].unique()
-        # 2. Sort font sizes in descending order and assign ranks
-        sizes_sorted = sorted(font_sizes, reverse=True)
-        size_to_rank = {fs: i+2 for i, fs in enumerate(sizes_sorted)} # starts at <h2>
-        # 3. Insert appropriate headings into the lines list based on ToC info
-        for index, row in toc.iterrows():
-            ln = index
-            fs = row['size']
-            hierarchy = "#" * size_to_rank[fs]
-            self.dfoc.loc[ln, 'text'] = f"\n{hierarchy} {''.join(self.dfoc.loc[ln, 'text'].split('**'))}\n"
-
-        # Now lines has updated heading markers where needed.
+        _, df = self._cluster_fonts(pca)
+        toc_entries = self._xtract_toc()
+        matches = self._fuzzy_match(df, toc_entries)
+        # replace the text of the lines with the matched text
+        for i, row in matches.iterrows():
+            self.dfoc.at[row['index'], 'text'] = row['text']
         return '\n'.join(self.dfoc['text'].to_list())
     
     def generate(self, llm, pca=0) -> str:
@@ -124,10 +115,41 @@ class Pdf2Markdown:
     
     ########################## PRIVATE METHODS ##################################
     
+    def _fuzzy_match(self, df, toc, min_score=70):
+        matches = []
+        for entry in toc:
+            level = entry[0]
+            toc_text = entry[1].upper()
+            toc_page = entry[2]
+            # Get candidate lines within page margin
+            candidates = df[df['page'] == (toc_page - 1)]
+
+            # Prepare a list of lines to match against
+            candidate_texts = candidates['text'].apply(lambda txt: ''.join(txt.split('*')).upper()).tolist()
+            # Use RapidFuzz to efficiently find the best match
+            match = process.extractOne(
+                toc_text, candidate_texts, scorer=fuzz.token_set_ratio
+            )
+
+            if match and match[1] >= min_score:
+                matched_text = match[0]
+                idx = candidates[candidates['text'].apply(lambda txt: ''.join(txt.split('*')).upper()) == matched_text].index
+                if not idx.empty:
+                    matches.append({
+                        'index': idx[0],
+                        'level': level,
+                        'text': f"{level * '#'} {''.join(matched_text.split('*'))}",
+                        'page': toc_page,
+                        'similarity': match[1]/100
+                    })
+
+        return pd.DataFrame(matches)
+
+
     def _has_toc(self):
         return len(self.doc.get_toc(simple=False)) > 0
 
-    def _xtract_toc(self, pretty=False):
+    def _xtract_toc(self, pretty=False) -> List[Tuple[int, str, int]] | str:
         toc_entries = self.doc.get_toc(simple=False)
         if pretty:
             lines = []
