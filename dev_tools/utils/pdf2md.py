@@ -147,8 +147,8 @@ class Pdf2Markdown:
                 if not idx.empty:
                     matches.append({
                         'index': idx[0],
-                        'level': level + 1, # starts at <h2>
-                        'text': f"{level * '#'} {''.join(matched_text.split('*'))}",
+                        'level': level,
+                        'text': f"{(level + 1) * '#'} {''.join(matched_text.split('*'))}",
                         'page': toc_page,
                         'similarity': match[1]/100
                     })
