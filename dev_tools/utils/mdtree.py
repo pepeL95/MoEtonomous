@@ -101,7 +101,7 @@ class MarkdownTree:
 
                 # Update grandparent
                 if (grandparent_id := doc_split.metadata.get(grandparent)):
-                    self.V[grandparent_id].metadata['children'].append(self.V[parent_id]['id'])
+                    self.V[grandparent_id].metadata['children'].append(self.V[parent_id].metadata['id'])
             
             # Update parent
             self.V[parent_id].metadata['children'].append(doc_split.metadata['id'])
