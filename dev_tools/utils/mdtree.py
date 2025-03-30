@@ -12,6 +12,23 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharac
 
 class MarkdownTree:
     @staticmethod
+    def from_str(md_str: str):
+        md_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=[
+            ("#", "Title"),
+            ("##", "Section"),
+            ("###", "Subsection"),
+            ("####", "Detailed Subsection"),
+        ])
+
+        md_splits = md_splitter.split_text(md_str)
+        if not 'Title' in md_splits[0].metadata:
+            md_splits = md_splitter.split_text(f"# Document\n\n{md_str}")
+        
+        tree = MarkdownTree()
+        tree._build_document_tree(md_chunks=md_splits)
+        return tree
+    
+    @staticmethod
     def from_langdocs(md_chunks: List[Document]):
         tree = MarkdownTree()
         tree._build_document_tree(md_chunks=md_chunks)
