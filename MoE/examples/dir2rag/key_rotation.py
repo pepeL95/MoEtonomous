@@ -211,7 +211,6 @@ class KeyRotatorAgent:
                     time.sleep(wait_time)
                 
                 self.key_obj.record_call(tokens=tokens)
-                os.environ['GOOGLE_API_KEY'] = self.key_obj.key                
                 response = self.agent.invoke(agent_input)
                 
                 return response
@@ -230,13 +229,13 @@ class KeyRotatorAgent:
                         print("Daily limit reached. Rotating to a different key...")
                         
                         self.key_obj = self.key_rotator.get_key(tokens=tokens)
-                        attempts += 1  # try again with another key
+                        os.environ['GOOGLE_API_KEY'] = self.key_obj.key
+                        self.agent.google_api_key = self.key_obj.key
                     else:
                         # Calculate wait time based on partitions
                         wait_time = self.key_obj._time_until_next_allowed(tokens)
                         print(f"Waiting {wait_time:.1f} seconds before next attempt...")
                         time.sleep(wait_time)
-                        attempts += 1
                 else:
                     print(f"Error invoking agent (attempt {attempts + 1}/{max_retries}): {e}")
                     attempts += 1
@@ -263,7 +262,6 @@ class EmbeddingsRotatorAgent:
                     time.sleep(wait_time)
                 
                 self.key_obj.record_call(tokens=tokens)
-                os.environ['GOOGLE_API_KEY'] = self.key_obj.key                
                 response = self.agent.embed_documents(agent_input)
                 
                 return response
@@ -282,13 +280,13 @@ class EmbeddingsRotatorAgent:
                         print("Daily limit reached. Rotating to a different key...")
                         
                         self.key_obj = self.key_rotator.get_key(tokens=tokens)
-                        attempts += 1  # try again with another key
+                        os.environ['GOOGLE_API_KEY'] = self.key_obj.key
+                        self.agent.google_api_key = self.key_obj.key
                     else:
                         # Calculate wait time based on partitions
                         wait_time = self.key_obj._time_until_next_allowed(tokens)
                         print(f"Waiting {wait_time:.1f} seconds before next attempt...")
                         time.sleep(wait_time)
-                        attempts += 1
                 else:
                     print(f"Error invoking agent (attempt {attempts + 1}/{max_retries}): {e}")
                     attempts += 1
