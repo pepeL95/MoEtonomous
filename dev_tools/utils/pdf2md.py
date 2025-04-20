@@ -147,7 +147,7 @@ class Pdf2Markdown:
                     matches.append({
                         'index': idx[0],
                         'level': level,
-                        'text': f"{(level + 1) * '#'} {''.join(matched_text.split('*'))}",
+                        'text': f"\n{(level + 1) * '#'} {''.join(matched_text.split('*'))}\n",
                         'page': toc_page,
                         'similarity': match[1]/100
                     })
