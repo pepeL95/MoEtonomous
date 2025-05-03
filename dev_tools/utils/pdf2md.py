@@ -75,9 +75,11 @@ class Pdf2Markdown:
         self.verbose = verbose
         self.dfoc = self.run_etl(dropna=True)
 
+    
     ########################## PUBLIC METHODS ##################################
 
     def invoke(self, llm, pca=0):
+        '''Parses a the self.document pdf into markdown. Use when you are not sure whether a ToC exists in the document. (i.e. LLM required)'''
         if self._has_toc():
             print_bold(f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
             return self.parse(pca)
@@ -91,11 +93,12 @@ class Pdf2Markdown:
             return self._xtract_toc(pretty)
         else:
             if llm is None:
-                raise ValueError("llm is required when PDF has no ToC")
+                raise ValueError("llm is required when PDF has no ToC.")
             print_bold(f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
-            return self._gen_toc(llm, pretty)
+            return self._generate_toc(llm, pretty)
 
     def parse(self, pca=0):
+        '''Parses a the self.document pdf into markdown. Use when you know a ToC exists in the document (i.e. No LLM required)'''
         toc_entries = self._xtract_toc()
         _, df = self._cluster_fonts(pca)
         matches = self._fuzzy_match(df, toc_entries)
@@ -106,7 +109,8 @@ class Pdf2Markdown:
         return '\n'.join(self.dfoc['text'].to_list())
     
     def generate(self, llm, pca=0) -> str:
-        toc = self._generate_toc(llm, pca=pca)
+        '''Parses a the self.document pdf into markdown. Use when no ToC exists in the document (i.e LLM required)'''
+        toc = self._prune_toc_entries(llm, pca=pca)
         for entry in toc:
             ln = entry["line_number"]
             level = entry['level'] + 1 # Starts at <h2>
@@ -125,6 +129,18 @@ class Pdf2Markdown:
     ########################## PRIVATE METHODS ##################################
     
     def _fuzzy_match(self, df, toc, min_score=70):
+        '''
+        Inputs:
+        - df: The internal df which contains all the goodies
+        - toc: The true, extracted toc (if exists) from the document metadata.
+        
+        Output:
+        - A pd.dataframe with the expected ToC
+        
+        High-level description:
+        Given a two sets: {candidate toc elements} and {true toc elements}, fuzzy match corresponding elements. 
+        Note: We use fuzzy match because they may not be syntactically equivalent.
+        '''
         matches = []
         for entry in toc:
             level = entry[0]
@@ -154,7 +170,6 @@ class Pdf2Markdown:
 
         return pd.DataFrame(matches)
 
-
     def _has_toc(self):
         return len(self.doc.get_toc(simple=False)) > 0
 
@@ -170,10 +185,10 @@ class Pdf2Markdown:
             return os.linesep.join(lines)
         return toc_entries
     
-    def _gen_toc(self, llm, pretty=False):
-        toc_entries = self._generate_toc(llm, pca=0)
+    def _generate_toc(self, llm, pretty=False):
+        high_entropy_toc_entries = self._prune_toc_entries(llm, pca=0)
         toc = []
-        for entry in toc_entries:
+        for entry in high_entropy_toc_entries:
             level = entry['level']
             title = entry['text']
             page = entry['page']
@@ -188,9 +203,8 @@ class Pdf2Markdown:
                 lines.append(f"{(level + 1) * '#'} {' '.join(title.split('\n')).strip()} - (page {page})")
             return os.linesep.join(lines)
         return toc
-        
-        
-    def _generate_toc(self, llm, pca=0) -> List[Dict[str, any]]:
+                
+    def _prune_toc_entries(self, llm, pca=0) -> List[Dict[str, any]]:
         toc_cluster, _ = self._cluster_fonts(pca)
         docs = [
             f"{i}: {{'text': {doc}, 'font_size': {toc_cluster.at[i, 'size']}, 'page': {int(toc_cluster.at[i, 'page'])}}}"
@@ -246,7 +260,10 @@ class Pdf2Markdown:
         df_scaled['kmeans'] = clusters
         golden_cluster = df[df['kmeans'] == self._which_cluster(df_scaled)]
 
-        # Further cluster if needed...
+        # Further cluster if needed. (i.e. increases recall)
+        # Note: 40 is an empirical, arbitrary number for the upper-limit of the number
+        # of elements in a ToC in an academic-like document (such as those from the Arxiv)
+        # TODO: convert to hyperparameter
         if len(golden_cluster) > 40:
             if self.verbose:
                 print(f'{CLIFont.blue} Cluster too big, computing kmeans again...{CLIFont.reset}')
@@ -286,8 +303,9 @@ class Pdf2Markdown:
             df_pca = pd.DataFrame(X_pca)
         
         # Kmeans
+        # Note: 2 clusters mimics binary classification for well designed features
         kmeans = KMeans(n_clusters=2, random_state=42)
-        clusters = kmeans.fit_predict(df_pca if df_pca is not None else data)
+        clusters = kmeans.fit_predict(df_pca or data)
         return clusters
     
     def _compute_true_mean(self, series):
@@ -524,7 +542,7 @@ class Pdf2Markdown:
     
     def _merge_lines(self, block:List) -> List:
         '''
-        Merges lines by y0 (..if on the same column)
+        Merges lines by y0 (..if on the same column - in multi-column documents)
         '''
         true_lines = {}
         for line in block.get('lines', []):
