@@ -127,6 +127,20 @@ class Pdf2Markdown:
         return df
     
     ########################## PRIVATE METHODS ##################################
+    def _get_training_data(self, llm, features=[], labels=[]):
+        # Filter out zero entropy lines
+        X_raw = self.dfoc[self.dfoc['ignore'] == False]
+        X_raw = X_raw[X_raw['entropy'] > 0]
+        # Scale training features
+        X_train = self._scale_features(X_raw, features or self.features)
+        X_train['text'] = X_raw.loc[:, 'text']
+        # Get positive labels
+        label_indices = [entry['line_number'] for entry in self._prune_toc_entries(llm, pca=0)]
+        # Assign labels
+        X_train['label'] = 0
+        X_train.loc[label_indices, 'label'] = 1
+
+        return X_train
     
     def _fuzzy_match(self, df, toc, min_score=70):
         '''
@@ -275,7 +289,7 @@ class Pdf2Markdown:
         return golden_cluster, df
 
     def _scale_features(self, data:List[dict] | pd.DataFrame, features:List[str]) -> np.ndarray:
-        df = pd.DataFrame(data)
+        df = pd.DataFrame(data, index=data.index)
         
         # Encode non-numeric features...
         encoder = LabelEncoder()
@@ -288,7 +302,7 @@ class Pdf2Markdown:
         # Feature scaling...
         scaler = MinMaxScaler(feature_range=(0,1))
         X_scaled = scaler.fit_transform(X)
-        df = pd.DataFrame(data=X_scaled, columns=features)
+        df = pd.DataFrame(data=X_scaled, columns=features, index=data.index)
 
         return df
     
