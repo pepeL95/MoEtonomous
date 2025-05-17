@@ -1,6 +1,7 @@
 import os
 import re
 import fitz
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -13,7 +14,7 @@ from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 
 class Span(TypedDict):
-    # native
+    # canonical span
     size: float
     flags: int
     font: str
@@ -26,13 +27,13 @@ class Span(TypedDict):
     page: int
 
 class LineVector(Span):
-    # augmented
-    wc: int # word count
-    bboxh: float # log of bbox height
-    bold: int # is bold
-    italics: int # is italic
-    start: float # probability of being the first line of a semantic block
-    ignore: bool # whether to ignore this line for clustering
+    # augmented span
+    wc: int  # word count
+    bboxh: float  # log of bbox height
+    bold: int  # is bold
+    italics: int  # is italic
+    start: float  # probability of being the first line of a semantic block
+    ignore: bool  # whether to ignore this line for clustering
 
 eob = LineVector()
 eob['text'] = '<end_of_block>'
@@ -68,6 +69,7 @@ sob['italics'] = 0
 sob['start'] = 0.0
 sob['entropy'] = 0.0
 
+
 class Pdf2Markdown:
     def __init__(self, pdf_path, verbose=False):
         self.doc = fitz.open(pdf_path)
@@ -75,45 +77,48 @@ class Pdf2Markdown:
         self.verbose = verbose
         self.dfoc = self.run_etl(dropna=True)
 
-    
-    ########################## PUBLIC METHODS ##################################
+    ######################################################## PUBLIC METHODS ######################################################
 
     def invoke(self, llm, pca=0):
-        '''Parses a the self.document pdf into markdown. Use when you are not sure whether a ToC exists in the document. (i.e. LLM required)'''
         if self._has_toc():
-            print_bold(f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
+            print_bold(
+                f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
             return self.parse(pca)
         else:
-            print_bold(f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
+            print_bold(
+                f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
             return self.generate(llm, pca)
-        
+
     def get_toc(self, llm=None, pretty=False):
         if self._has_toc():
-            print_bold(f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
+            print_bold(
+                f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
             return self._xtract_toc(pretty)
         else:
             if llm is None:
                 raise ValueError("llm is required when PDF has no ToC.")
-            print_bold(f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
+            print_bold(
+                f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
             return self._generate_toc(llm, pretty)
 
     def parse(self, pca=0):
         '''Parses a the self.document pdf into markdown. Use when you know a ToC exists in the document (i.e. No LLM required)'''
         toc_entries = self._xtract_toc()
         _, df = self._cluster_fonts(pca)
+        # df = self._predict()
         matches = self._fuzzy_match(df, toc_entries)
         # replace the text of the lines with the matched text
         for _, row in matches.iterrows():
             self.dfoc.at[row['index'], 'text'] = row['text']
 
         return '\n'.join(self.dfoc['text'].to_list())
-    
+
     def generate(self, llm, pca=0) -> str:
         '''Parses a the self.document pdf into markdown. Use when no ToC exists in the document (i.e LLM required)'''
         toc = self._prune_toc_entries(llm, pca=pca)
         for entry in toc:
             ln = entry["line_number"]
-            level = entry['level'] + 1 # Starts at <h2>
+            level = entry['level'] + 1  # Starts at <h2>
             self.dfoc.loc[ln, 'text'] = f"\n{level * '#'} {''.join(self.dfoc.loc[ln, 'text'].split('**'))}\n"
         return '\n'.join(self.dfoc['text'].to_list())
 
@@ -123,34 +128,21 @@ class Pdf2Markdown:
             page = self._handle_page(pno)
             data.extend(page)
         df = pd.DataFrame(data)
-        if dropna: df.dropna(inplace=True)
+        if dropna:
+            df.dropna(inplace=True)
         return df
-    
-    ########################## PRIVATE METHODS ##################################
-    def _get_training_data(self, llm, features=[], labels=[]):
-        # Filter out zero entropy lines
-        X_raw = self.dfoc[self.dfoc['ignore'] == False]
-        X_raw = X_raw[X_raw['entropy'] > 0]
-        # Scale training features
-        X_train = self._scale_features(X_raw, features or self.features)
-        X_train['text'] = X_raw.loc[:, 'text']
-        # Get positive labels
-        label_indices = [entry['line_number'] for entry in self._prune_toc_entries(llm, pca=0)]
-        # Assign labels
-        X_train['label'] = 0
-        X_train.loc[label_indices, 'label'] = 1
 
-        return X_train
-    
+    ######################################################## PRIVATE METHODS ######################################################
+
     def _fuzzy_match(self, df, toc, min_score=70):
         '''
         Inputs:
         - df: The internal df which contains all the goodies
         - toc: The true, extracted toc (if exists) from the document metadata.
-        
+
         Output:
         - A pd.dataframe with the expected ToC
-        
+
         High-level description:
         Given a two sets: {candidate toc elements} and {true toc elements}, fuzzy match corresponding elements. 
         Note: We use fuzzy match because they may not be syntactically equivalent.
@@ -164,7 +156,8 @@ class Pdf2Markdown:
             candidates = df[df['page'] == (toc_page - 1)]
 
             # Prepare a list of lines to match against
-            candidate_texts = candidates['text'].apply(lambda txt: ''.join(txt.split('*')).upper()).tolist()
+            candidate_texts = candidates['text'].apply(
+                lambda txt: ''.join(txt.split('*')).upper()).tolist()
             # Use RapidFuzz to efficiently find the best match
             match = process.extractOne(
                 toc_text, candidate_texts, scorer=fuzz.token_set_ratio
@@ -172,7 +165,8 @@ class Pdf2Markdown:
 
             if match and match[1] >= min_score:
                 matched_text = match[0]
-                idx = candidates[candidates['text'].apply(lambda txt: ''.join(txt.split('*')).upper()) == matched_text].index
+                idx = candidates[candidates['text'].apply(
+                    lambda txt: ''.join(txt.split('*')).upper()) == matched_text].index
                 if not idx.empty:
                     matches.append({
                         'index': idx[0],
@@ -195,10 +189,11 @@ class Pdf2Markdown:
                 level = entry[0]
                 title = entry[1]
                 page = entry[2]
-                lines.append(f"{(level + 1) * '#'} {' '.join(title.split('\n')).strip()} - (page {page})")
+                lines.append(
+                    f"{(level + 1) * '#'} {' '.join(title.split('\n')).strip()} - (page {page})")
             return os.linesep.join(lines)
         return toc_entries
-    
+
     def _generate_toc(self, llm, pretty=False):
         high_entropy_toc_entries = self._prune_toc_entries(llm, pca=0)
         toc = []
@@ -207,25 +202,27 @@ class Pdf2Markdown:
             title = entry['text']
             page = entry['page']
             toc.append((level, title, page))
-        
+
         if pretty:
             lines = []
             for entry in toc:
                 level = entry[0]
                 title = entry[1]
-                page = entry[2] # page
-                lines.append(f"{(level + 1) * '#'} {' '.join(title.split('\n')).strip()} - (page {page})")
+                page = entry[2]  # page
+                lines.append(
+                    f"{(level + 1) * '#'} {' '.join(title.split('\n')).strip()} - (page {page})")
             return os.linesep.join(lines)
         return toc
-                
+
     def _prune_toc_entries(self, llm, pca=0) -> List[Dict[str, any]]:
         toc_cluster, _ = self._cluster_fonts(pca)
+        # toc_cluster = self._predict()
         docs = [
             f"{i}: {{'text': {doc}, 'font_size': {toc_cluster.at[i, 'size']}, 'page': {int(toc_cluster.at[i, 'page'])}}}"
             for i, doc in toc_cluster['text'].items()
             if i in toc_cluster.index and doc != '</BR>'
         ]
-        
+
         # TOC Extractor
         agent = EphemeralNLPAgent(
             name='_',
@@ -254,17 +251,19 @@ class Pdf2Markdown:
             ),
         )
 
-        if self.verbose: print_bold(f"{CLIFont.light_green}Sending {llm.get_num_tokens(', '.join(docs))} tokens...{CLIFont.reset}")
+        if self.verbose:
+            print_bold(
+                f"{CLIFont.light_green}Sending {llm.get_num_tokens(', '.join(docs))} tokens...{CLIFont.reset}")
         ctx = '\n'.join(docs)
         # print(ctx)
         toc = agent.invoke({'input': ctx})
         return toc
-    
-    def _cluster_fonts(self, pca=0):  
+
+    def _cluster_fonts(self, pca=0):
         # Filter out zero entropy lines
         df = self.dfoc[self.dfoc['ignore'] == False]
         df = df[df['entropy'] > 0]
-        
+
         # Scale features
         df_scaled = self._scale_features(df, self.features)
 
@@ -280,17 +279,19 @@ class Pdf2Markdown:
         # TODO: convert to hyperparameter
         if len(golden_cluster) > 40:
             if self.verbose:
-                print(f'{CLIFont.blue} Cluster too big, computing kmeans again...{CLIFont.reset}')
+                print(
+                    f'{CLIFont.blue} Cluster too big, computing kmeans again...{CLIFont.reset}')
             df_scaled = self._scale_features(golden_cluster, ['entropy'])
             clusters = self._cluster(data=df_scaled, pca=0)
             golden_cluster.loc[:, 'kmeans'] = clusters
-            golden_cluster = golden_cluster[golden_cluster['kmeans'] == self._which_cluster(golden_cluster)]
+            golden_cluster = golden_cluster[golden_cluster['kmeans'] == self._which_cluster(
+                golden_cluster)]
 
         return golden_cluster, df
 
-    def _scale_features(self, data:List[dict] | pd.DataFrame, features:List[str]) -> np.ndarray:
+    def _scale_features(self, data: List[dict] | pd.DataFrame, features: List[str]) -> np.ndarray:
         df = pd.DataFrame(data, index=data.index)
-        
+
         # Encode non-numeric features...
         encoder = LabelEncoder()
         df['font'] = encoder.fit_transform(df['font'])
@@ -298,14 +299,14 @@ class Pdf2Markdown:
 
         # Build data matrix with new encoded vals
         X = df[features]
-        
+
         # Feature scaling...
-        scaler = MinMaxScaler(feature_range=(0,1))
+        scaler = MinMaxScaler(feature_range=(0, 1))
         X_scaled = scaler.fit_transform(X)
         df = pd.DataFrame(data=X_scaled, columns=features, index=data.index)
 
         return df
-    
+
     def _cluster(self, data, pca=0):
         # Perfom PCA for dim reduction
         df_pca = None
@@ -315,30 +316,32 @@ class Pdf2Markdown:
 
             # Get pca data
             df_pca = pd.DataFrame(X_pca)
-        
+
         # Kmeans
         # Note: 2 clusters mimics binary classification for well designed features
         kmeans = KMeans(n_clusters=2, random_state=42)
         clusters = kmeans.fit_predict(df_pca or data)
         return clusters
-    
+
     def _compute_true_mean(self, series):
         """Compute the mean excluding outliers using the IQR method."""
         Q1 = series.quantile(0.25)
         Q3 = series.quantile(0.75)
         IQR = Q3 - Q1
-        filtered_series = series[(series >= (Q1 - 1.5 * IQR)) & (series <= (Q3 + 1.5 * IQR))]
+        filtered_series = series[(series >= (
+            Q1 - 1.5 * IQR)) & (series <= (Q3 + 1.5 * IQR))]
         return filtered_series.mean()
-    
-    def _which_cluster(self, data:pd.DataFrame):
-        mean_entropy = data.groupby('kmeans')['entropy'].agg(self._compute_true_mean)
+
+    def _which_cluster(self, data: pd.DataFrame):
+        mean_entropy = data.groupby(
+            'kmeans')['entropy'].agg(self._compute_true_mean)
         return (mean_entropy).idxmax()
-    
+
     def _score_heading_candidate(self, string: str) -> float:
         """
         Scores how likely a string is to be a heading in a PDF document using multiple weighted heuristics.
         Returns a score between 0-1, with higher values indicating greater likelihood of being a heading.
-        
+
         Key heuristics:
         - Length and word count patterns typical of headings
         - Capitalization patterns
@@ -348,17 +351,17 @@ class Pdf2Markdown:
         """
         # Initialize base score
         score = 0.0
-        
+
         # Clean and prepare string
         clean_str = string.strip()
         tokens = clean_str.split()
         words = re.findall(r'\b[a-zA-Z]+\b', clean_str)
         token_count = len(tokens)
         word_count = len(words)
-        
+
         if not words or len(string.strip()) < 3:
             return 0.0
-        
+
         if word_count / token_count < 0.5:
             return 0.0
 
@@ -370,11 +373,11 @@ class Pdf2Markdown:
         else:  # Too long, likely paragraph
             for i in range(1, word_count - 11):
                 score -= 0.2 * (i + 1)  # Increased penalty for very long text
-        
+
         # Section number pattern (e.g., "1.", "1.2", "A.", "I.")
         if re.match(r'^(?:(?:\d+\.)+\d*\s|\d+\.\s|\d\s+[A-Z]|[A-Z]\.\s|[IVX]+\.\s)', clean_str):
             score += 0.9
-            
+
         # Capitalization patterns
         if ' '.join(words).istitle():  # Title Case
             score += 0.5
@@ -384,11 +387,11 @@ class Pdf2Markdown:
             score += 0.2
         elif not not words[0][0].isupper():  # First word *not* capitalized
             score -= 0.6
-            
+
         # Penalize sentence-ending punctuation
         if re.search(r'[.,;:]$', clean_str):
             score -= 0.6
-            
+
         # Penalize certain patterns...
         if re.search(r'[@#$§%*()^_+=\[\]{}<>]', clean_str):  # Special characters
             score -= 0.8
@@ -399,7 +402,29 @@ class Pdf2Markdown:
 
         # Clamp final score
         return max(0.0, score)
+
+    def _word_count(self, str: str):
+        # Clean and prepare string
+        clean_str = str.strip()
+        words = re.findall(r'\b[a-zA-Z]+\b', clean_str)
+        word_count = len(words)
+        return word_count
     
+    def _caps_ratio(self, str: str):
+        clean_str = str.strip()
+        words = re.findall(r'\b[a-zA-Z]+\b', clean_str)
+        if not words:
+            return 0.0
+        caps_count = sum([1 for word in words if word[0].isupper()])
+        caps_ratio = caps_count / len(words)
+        return caps_ratio
+
+    def _end_punctuation(self, str: str):
+        pattern_match = re.search(r'[.,;:]$', str.strip())
+        if pattern_match:
+            return 1.0
+        return 0.0
+
     def _compute_heading_entropy(self, block: List[Dict[str, Union[str, float, int]]]) -> List[Dict[str, Union[str, float, int]]]:
         def predict(title_score, weight, size, is_first):
             """Weighted sum of features."""
@@ -418,7 +443,7 @@ class Pdf2Markdown:
             if curr['text'].strip() in loi.union('<end_of_block>'):
                 curr['entropy'] = 0.0
                 continue
-            
+
             # Good candidate if preceded by </BR> or <start_of_block>
             if prefix in loi:
                 v0 = np.array([
@@ -429,13 +454,13 @@ class Pdf2Markdown:
                     suffix.get('size', 0.0),
                     suffix.get('weight', 0.0),
                 ], dtype=np.float32)
-                
+
                 # Dot product similarity
                 norm2 = round(np.linalg.norm(v0) ** 2, 2)
                 dot = round(float(np.dot(v0, v1)), 2)
                 sim = dot / norm2
 
-                # If equal syntactically, treat current line as paragraph text 
+                # If equal syntactically, treat current line as paragraph text
                 if sim == 1.0:
                     # Note: We exclude fully consecutive bolded lines, since those are good headings candidates
                     if suffix.get('bold', 0.0):
@@ -444,7 +469,7 @@ class Pdf2Markdown:
                         suffix['text'] = ''
                     else:
                         curr['start'] = curr.get('start', 0.0)
-                
+
                 # If highly similar (i.e. not same) but bolded, treat both as heading
                 elif sim > 0.8 and suffix.get('bold', 0.0):
                     curr['start'] = 1.0
@@ -466,25 +491,27 @@ class Pdf2Markdown:
             )
 
         return block
-    
-    def _isnum(self, s:str):
+
+    def _isnum(self, s: str):
         try:
             float(s)
             return True
         except ValueError:
             return False
 
-    def _handle_page(self, pno:int) -> List[LineVector]:
+    def _handle_page(self, pno: int) -> List[LineVector]:
         '''
         wraps page with <start_of_page>...handle_blocks...</end_of_page> tags for llm understanding
         '''
-        blocks = [self._merge_lines(block) for block in self.doc.load_page(pno).get_textpage().extractDICT().get('blocks', [])]
-        mask_bboxes = [table.bbox for table in self.doc.load_page(pno).find_tables()]
+        blocks = [self._merge_lines(block) for block in self.doc.load_page(
+            pno).get_textpage().extractDICT().get('blocks', [])]
+        mask_bboxes = [
+            table.bbox for table in self.doc.load_page(pno).find_tables()]
         line_vectors = []
         for block in blocks:
             block_ = self._handle_block(block, pno, mask_bboxes)
             line_vectors.extend(block_)
-        
+
         return line_vectors
 
     def _handle_block(self, block, pno, mask_bboxes) -> List[LineVector]:
@@ -503,22 +530,23 @@ class Pdf2Markdown:
         lines = self._compute_heading_entropy(lines)
         return lines
 
-    def _handle_line(self, line:List[Span], pno:int, mask_bboxes) -> LineVector:
+    def _handle_line(self, line: List[Span], pno: int, mask_bboxes) -> LineVector:
         def is_bold(span):
-            if span['text'].strip() in {'</BR>', '!', ''}: # Note '!' is a special character for unknown ascii codes
+            # Note '!' is a special character for unknown ascii codes
+            if span['text'].strip() in {'</BR>', '!', ''}:
                 return True
             return any(bold_match in span['font'] for bold_match in ["Bold", "TB", "Medi", "CMB"])
-        
-        def is_italic(span):
-            if span['text'].strip() in {'</BR>', '!'}: # Note '!' is a special character for unknown ascii codes
-                return True
-            return any(bold_match in span['font'] for bold_match in ["oblique", "CMTI", "CMMI", "Ital"]) 
 
-        
+        def is_italic(span):
+            # Note '!' is a special character for unknown ascii codes
+            if span['text'].strip() in {'</BR>', '!'}:
+                return True
+            return any(bold_match in span['font'] for bold_match in ["oblique", "CMTI", "CMMI", "Ital"])
+
         # Handle breaklines
         if line and not line[0]['text'].strip():
             line[0]['text'] = '</BR>'
-        
+
         # Reduce...
         line_vector = LineVector()
         line_vector['text'] = ''.join(span['text'] for span in line).strip()
@@ -537,14 +565,16 @@ class Pdf2Markdown:
         # Augment...
         ret = self._augment_line_vector(line_vector, mask_bboxes)
         return ret
-            
-    def _augment_line_vector(self, line_vector:LineVector, mask_bboxes):
-        line_vector['entropy'] = self._score_heading_candidate(''.join(line_vector['text'].split('*')).strip())
-        line_vector['wc'] = len(line_vector['text'].split())
-        line_vector['start'] = 0.0
+
+    def _augment_line_vector(self, line_vector: LineVector, mask_bboxes: List[any]):
+        line_vector['wc'] = self._word_count(''.join(line_vector['text'].split('*')).strip())
+        line_vector['caps_ratio'] = self._caps_ratio(''.join(line_vector['text'].split('*')).strip())
         line_vector['weight'] = line_vector['bold'] + line_vector['italics']
-        line_vector['bboxh'] = np.log(abs(line_vector['bbox'][1] - line_vector['bbox'][3]))
         line_vector['ignore'] = self._ignore_bboxes(line_vector, mask_bboxes)
+        line_vector['end_punctuation'] = self._end_punctuation(line_vector['text'])
+        line_vector['bboxh'] = np.log(abs(line_vector['bbox'][1] - line_vector['bbox'][3]))
+        line_vector['start'] = 0.0 # defines whether a line is the first in the block of text
+        line_vector['entropy'] = self._score_heading_candidate(''.join(line_vector['text'].split('*')).strip())
         if line_vector['text'][0] == '#':
             line_vector['text'] = f"`{line_vector['text']}`"
         if line_vector['bold'] and line_vector['text'] != '</BR>':
@@ -553,8 +583,8 @@ class Pdf2Markdown:
             line_vector['text'] = f"*{line_vector['text']}*"
             line_vector['size'] -= 0.01
         return line_vector
-    
-    def _merge_lines(self, block:List) -> List:
+
+    def _merge_lines(self, block: List) -> List:
         '''
         Merges lines by y0 (..if on the same column - in multi-column documents)
         '''
@@ -565,7 +595,7 @@ class Pdf2Markdown:
             # Mapping out new lines by their y0, in order to merge lines (+/-1)
             if not y0 in true_lines:
                 true_lines[y0] = line.get('spans', [])
-            
+
             # The following lines should be merged (unless document is column-designed)
             else:
                 if len(line.get('spans', [])):
@@ -573,17 +603,18 @@ class Pdf2Markdown:
                     doc_with = self.doc[0].bound()[2] - self.doc[0].bound()[0]
                     if (
                         true_lines[y0][-1]['bbox'][2] > doc_with / 2 and line['spans'][0]['bbox'][0] > doc_with / 2 or
-                        true_lines[y0][-1]['bbox'][2] < doc_with / 2 and line['spans'][0]['bbox'][0] < doc_with / 2
+                        true_lines[y0][-1]['bbox'][2] < doc_with /
+                            2 and line['spans'][0]['bbox'][0] < doc_with / 2
                     ):
                         line['spans'][0]['text'] = f" {line['spans'][0]['text']}"
                         true_lines[y0].extend(line['spans'])
-                   
+
         return {'lines': list(true_lines.values())}
 
-    def _ignore_bboxes(self, line_vector:LineVector, bboxes) -> bool:
+    def _ignore_bboxes(self, line_vector: LineVector, bboxes: List[any]) -> bool:
         x0, y0 = line_vector['origin']
         # Headers
-        if y0 < 50:
+        if y0 < 70:
             return True
         # Footers
         if y0 > self.doc[0].bound()[3] - 50:
@@ -593,3 +624,41 @@ class Pdf2Markdown:
             if x0 > bbox[0] and x0 < bbox[2] and y0 > bbox[1] and y0 < bbox[3]:
                 return True
         return False
+
+     ##################### Logistic Regression ############################
+
+    ###############################################################################################################################
+
+    def _predict(self):
+        inference_data = self._get_inference_data(['size', 'entropy', 'weight', 'wc', 'flags', 'caps_ratio', 'end_punctuation'])
+        X = inference_data.drop(labels=['text', 'page'], axis=1)
+        model = joblib.load('/Users/pepelopez/Documents/Programming/MoEtonomous/dev_tools/utils/model/logreg.pkl')
+        y_pred = model.predict(X)
+        inference_data['label'] = y_pred
+        return inference_data[inference_data['label'] == 1]
+
+    def _get_inference_data(self, features=[]):
+        # Filter out zero entropy lines
+        X_raw = self.dfoc[self.dfoc['ignore'] == False]
+        X_raw = X_raw[X_raw['entropy'] > 0]
+        # Scale training features
+        X_inference = self._scale_features(X_raw, features or self.features)
+        X_inference['page'] = X_raw.loc[:, 'page']
+        X_inference['text'] = X_raw.loc[:, 'text']
+        return X_inference
+    
+    def _get_training_data(self, llm, features=[]):
+        # Filter out zero entropy lines
+        X_raw = self.dfoc[self.dfoc['ignore'] == False]
+        X_raw = X_raw[X_raw['entropy'] > 0]
+        # Scale training features
+        X_train = self._scale_features(X_raw, features or self.features)
+        X_train['text'] = X_raw.loc[:, 'text']
+        # Get positive labels
+        label_indices = [entry['line_number']
+                         for entry in self._prune_toc_entries(llm, pca=0)]
+        # Assign labels
+        X_train['label'] = 0
+        X_train.loc[label_indices, 'label'] = 1
+
+        return X_train
