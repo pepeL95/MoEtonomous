@@ -55,7 +55,7 @@ class GenXpert:
     agent = EphemeralNLPAgent(
         name='GenAgent',
         llm=LLMs.Gemini(),
-        system_prompt='You are an intelligent expert.',
+        system_prompt='You are a general expert with a wide range of knowlede in science, and much more.',
     )
 
 ...
@@ -107,9 +107,9 @@ class GenXpertStrategy(BaseExpertStrategy):
 - Regression test your MoE.
 - Annotate your custom MoE class with `@MoE`
 - Note: When using the `@MoE` annotation, you **MUST** have your `experts` array under your defined class.
-- Note: When using the `@MoE` annotation, you **MUST** provide a router through:
+- Note: When using the `@MoE` annotation, you **MUST** provide a router through either:
 - - 1 `@Autonomous(llm)` for an autonomous router.
-- - 2 `@ForceFirst(expert_name)` if your MoE is linear and you enforce next in all your strategies. Provides the starting point
+- - 2 `@ForceFirst(expert_name)` when your MoE is linear and you enforce `state.next` in all your strategies. Provides the starting point.
 
 ```python
 from dev_tools.enums.llms import LLMs

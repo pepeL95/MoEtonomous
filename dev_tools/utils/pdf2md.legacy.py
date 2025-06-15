@@ -4,9 +4,14 @@ import fitz
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn.cluster import KMeans
 from rapidfuzz import fuzz, process
+from sklearn.decomposition import PCA
 from typing import List, Tuple, TypedDict, Dict, Union
 from dev_tools.utils.clifont import print_bold, CLIFont
+from langchain_core.output_parsers import JsonOutputParser
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+from agents.prebuilt.ephemeral_nlp_agent import EphemeralNLPAgent
 
 class Span(TypedDict):
     # canonical span
@@ -67,42 +72,60 @@ sob['start'] = 0.0
 sob['entropy'] = 0.0
 sob['whitespace'] = 0.0
 
+
 class Pdf2Markdown:
     def __init__(self, pdf_path, verbose=False):
         self.doc = fitz.open(pdf_path)
         self.features = ['entropy']
         self.verbose = verbose
         self.dfoc = self.run_etl(dropna=True)
-        self.model = None
 
     ######################################################## PUBLIC METHODS ######################################################
 
-    def invoke(self):
+    def invoke(self, llm, pca=0):
         if self._has_toc():
-            print_bold(f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
-            return self.parse()
+            print_bold(
+                f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
+            return self.parse(pca)
         else:
-            print_bold(f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
-            raise NotImplementedError('Gotta figure out a way to get the level hierarchy.')
+            print_bold(
+                f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
+            return self.generate(llm, pca)
 
     def get_toc(self, llm=None, pretty=False):
         if self._has_toc():
-            print_bold(f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
+            print_bold(
+                f"{CLIFont.light_green}Extracting ToC from PDF...{CLIFont.reset}")
             return self._xtract_toc(pretty)
         else:
             if llm is None:
                 raise ValueError("llm is required when PDF has no ToC.")
-            print_bold(f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
-            raise NotImplementedError('Gotta figure out a way to get the level hierarchy.')
+            print_bold(
+                f"{CLIFont.light_green}Generating ToC from PDF...{CLIFont.reset}")
+            return self._generate_toc(llm, pretty)
 
-    def parse(self):
-        toc_entries = self._xtract_toc(pretty=False)
-        ham = self._predict()
-        matches = self._fuzzy_match(ham, toc_entries)
-        # Replace the text of the lines with the matched text
+    def parse(self, pca=0):
+        '''Parses a the self.document pdf into markdown. Use when you know a ToC exists in the document (i.e. No LLM required)'''
+        toc_entries = self._xtract_toc()
+        # _, df = self._cluster_fonts(pca)
+        df = self._predict()
+        matches = self._fuzzy_match(df, toc_entries)
+        # replace the text of the lines with the matched text
         for _, row in matches.iterrows():
             self.dfoc.at[row['index'], 'text'] = row['text']
 
+        return '\n'.join(self.dfoc['text'].to_list())
+
+    def generate(self, llm, pca=0) -> str:
+        '''Parses a the self.document pdf into markdown. Use when no ToC exists in the document (i.e LLM required)'''
+        toc = self._predict()
+        return toc
+        toc = self._prune_toc_entries(llm, pca=pca)
+        for entry in toc:
+            ln = entry["line_number"]
+            level = entry['level'] + 1  # Starts at <h2>
+            self.dfoc.loc[ln, 'text'] = f"\n{level * '#'} {''.join(self.dfoc.loc[ln, 'text'].split('**'))}\n"
+        
         return '\n'.join(self.dfoc['text'].to_list())
 
     def run_etl(self, dropna=False):
@@ -111,7 +134,6 @@ class Pdf2Markdown:
             page = self._handle_page(pno)
             data.extend(page)
         df = pd.DataFrame(data)
-        # Apply additional augmentations
         df = self._augment_dfoc(df)
         if dropna:
             df.dropna(inplace=True)
@@ -147,6 +169,11 @@ class Pdf2Markdown:
             match = process.extractOne(
                 toc_text, candidate_texts, scorer=fuzz.token_set_ratio
             )
+
+            if match:
+                print(f'From page: {toc_page - 1}')
+                print_bold(f'matched: {toc_text} to {match[0]} with score: {match[1]}')
+                print()
             
             if match and match[1] >= min_score:
                 matched_text = match[0]
@@ -179,7 +206,151 @@ class Pdf2Markdown:
             return os.linesep.join(lines)
         return toc_entries
 
-    def _apply_heading_heuristics(self, string: str) -> float:
+    def _generate_toc(self, llm, pretty=False):
+        high_entropy_toc_entries = self._prune_toc_entries(llm, pca=0)
+        toc = []
+        for entry in high_entropy_toc_entries:
+            level = entry['level']
+            title = entry['text']
+            page = entry['page']
+            toc.append((level, title, page))
+
+        if pretty:
+            lines = []
+            for entry in toc:
+                level = entry[0]
+                title = entry[1]
+                page = entry[2]  # page
+                lines.append(
+                    f"{(level + 1) * '#'} {' '.join(title.split('\n')).strip()} - (page {page})")
+            return os.linesep.join(lines)
+        return toc
+
+    def _prune_toc_entries(self, llm, pca=0) -> List[Dict[str, any]]:
+        # toc_cluster, _ = self._cluster_fonts(pca)
+        toc_cluster = self._predict()
+        docs = [
+            f"{i}: {{'text': {doc}, 'font_size': {toc_cluster.at[i, 'size']}, 'page': {int(toc_cluster.at[i, 'page'])}}}"
+            for i, doc in toc_cluster['text'].items()
+            if i in toc_cluster.index and doc != '</BR>'
+        ]
+
+        # TOC Extractor
+        agent = EphemeralNLPAgent(
+            name='_',
+            llm=llm,
+            output_parser=JsonOutputParser(),
+            prompt_template=(
+                "## Instructions\n"
+                "You are given a structured set of lines extracted from a PDF document. \n"
+                "Each line is accompanied by its text (title), page, font_size, and font_weight. \n"
+                "Keep in mind that the document's paragraph font size is {paragraph_size}. \n"
+                "Your task is to classify and extract only the actual headings and subheadings that span \n"
+                "the Table of Contents structure of this document.\n\n"
+                "## Criteria for identifying headings and subheadings:\n"
+                f"* Typically, headings have larger font sizes compared to body text, though subheadings may \n"
+                "share the same font size as standard text but may follow a numeric hierarchical structure (e.g., 1, 1.1, 2.1.2) **or** the font weight is greater than 0.\n"
+                "* Headings and subheadings are often bolded and begin with numeric identifiers or are concise phrases summarizing content sections.\n"
+                "* Non-heading lines often include author names, arbitrary numerical values, random phrases, or explanatory sentences that do not represent structural components of the document’s Table of Contents.\n\n"
+                "## Candidates for ToC\n"
+                "-- Begin Cluster --\n"
+                "{input}\n"
+                "-- End Cluster --\n\n"
+                "## Output Format\n"
+                "Return a JSON as follows:\n"
+                "- `\"line_number\"`: (int) the original line index in the PDF extraction\n"
+                "- `\"text\"`: (str) the text of the heading as you received it.\n"
+                "- `\"level\"`: (int) the nested heading hierarchy determined by you (IMPORTANT!!!!: this will be used to created a markdown structure, so be very careful here. For example, consider the different font_size).\n"
+                "- `\"page\"`: (int) the page number corresponding to the the heading/subheading you identified."
+            ),
+        )
+
+        ctx = '\n'.join(docs)
+        if self.verbose:
+            print_bold(f"{CLIFont.light_green}Sending {llm.get_num_tokens(', '.join(docs))} tokens...{CLIFont.reset}")
+            print(ctx)
+        # print(ctx)
+        toc = agent.invoke({'input': ctx, 'paragraph_size': self.dfoc['size'].mode()[0]})
+        return toc
+
+    def _cluster_fonts(self, pca=0):
+        # Filter out zero entropy lines
+        df = self.dfoc[self.dfoc['ignore'] == False]
+        df = df[df['entropy'] > 0]
+
+        # Scale features
+        df_scaled = self._scale_features(df, self.features)
+
+        # Kmeans
+        clusters = self._cluster(data=df_scaled, pca=pca)
+        df['kmeans'] = clusters
+        df_scaled['kmeans'] = clusters
+        golden_cluster = df[df['kmeans'] == self._which_cluster(df_scaled)]
+
+        # Further cluster if needed. (i.e. increases recall)
+        # Note: 40 is an empirical, arbitrary number for the upper-limit of the number
+        # of elements in a ToC in an academic-like document (such as those from the Arxiv)
+        # TODO: convert to hyperparameter
+        if len(golden_cluster) > 40:
+            if self.verbose:
+                print(
+                    f'{CLIFont.blue} Cluster too big, computing kmeans again...{CLIFont.reset}')
+            df_scaled = self._scale_features(golden_cluster, ['entropy'])
+            clusters = self._cluster(data=df_scaled, pca=0)
+            golden_cluster.loc[:, 'kmeans'] = clusters
+            golden_cluster = golden_cluster[golden_cluster['kmeans'] == self._which_cluster(golden_cluster)]
+
+        return golden_cluster, df
+
+    def _scale_features(self, data: List[dict] | pd.DataFrame, features: List[str]) -> np.ndarray:
+        df = pd.DataFrame(data, index=data.index)
+
+        # Encode non-numeric features...
+        encoder = LabelEncoder()
+        df['font'] = encoder.fit_transform(df['font'])
+        df['flags'] = encoder.fit_transform(df['flags'])
+
+        # Build data matrix with new encoded vals
+        X = df[features]
+
+        # Feature scaling...
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        X_scaled = scaler.fit_transform(X)
+        df = pd.DataFrame(data=X_scaled, columns=features, index=data.index)
+
+        return df
+
+    def _cluster(self, data, pca=0):
+        # Perfom PCA for dim reduction
+        df_pca = None
+        if pca > 0:
+            pca = PCA(n_components=pca)
+            X_pca = pca.fit_transform(data)
+
+            # Get pca data
+            df_pca = pd.DataFrame(X_pca)
+
+        # Kmeans
+        # Note: 2 clusters mimics binary classification for well designed features
+        kmeans = KMeans(n_clusters=2, random_state=42)
+        clusters = kmeans.fit_predict(df_pca or data)
+        return clusters
+
+    def _compute_true_mean(self, series):
+        """Compute the mean excluding outliers using the IQR method."""
+        Q1 = series.quantile(0.25)
+        Q3 = series.quantile(0.75)
+        IQR = Q3 - Q1
+        filtered_series = series[(series >= (
+            Q1 - 1.5 * IQR)) & (series <= (Q3 + 1.5 * IQR))]
+        return filtered_series.mean()
+
+    def _which_cluster(self, data: pd.DataFrame):
+        mean_entropy = data.groupby(
+            'kmeans')['entropy'].agg(self._compute_true_mean)
+        return (mean_entropy).idxmax()
+
+    def _score_heading_candidate(self, string: str) -> float:
         """
         Scores how likely a string is to be a heading in a PDF document using multiple weighted heuristics.
         Returns a score between 0-1, with higher values indicating greater likelihood of being a heading.
@@ -226,7 +397,7 @@ class Pdf2Markdown:
             score -= 0.6
 
         # Penalize sentence-ending punctuation
-        if self._has_end_punctuation(clean_str):
+        if re.search(r'[.,;:]$', clean_str):
             score -= 0.6
 
         # Penalize certain patterns...
@@ -241,13 +412,17 @@ class Pdf2Markdown:
         return max(0.0, score)
 
     def _compute_whitespace(self, lines:List[LineVector]):
-        """Retrurns the whitespace below of a given line of text in the pdf"""
+        """
+        """
         def compute(prev, curr, nxt):
             upper_ws = abs(curr['bbox'][1] - prev['bbox'][-1])
             lower_ws = abs(curr['bbox'][-1] - nxt['bbox'][1])
             ret = upper_ws + lower_ws
             return upper_ws, lower_ws, ret
         
+        # Ensure lines are sorted top-to-bottom by bbox[1] (top of the line)
+        # lines = sorted(lines, key=lambda l: -l['bbox'][1])
+
         # Clean lines
         clean_lines = []
         dirty_line_txt = {'<start_of_block>', '<end_of_block>', '</BR>'}
@@ -262,9 +437,16 @@ class Pdf2Markdown:
             nxt:LineVector = clean_lines[i + 1] if i < len(clean_lines) - 1 else None
 
             if prev and nxt:
-                _, lower_ws, _ = compute(prev, curr, nxt)
+                _, lower_ws, total = compute(prev, curr, nxt)
+                # print('-------------------------------')
+                # print(prev['text'], prev['bbox'][-1])
+                # print(curr['text'], curr['bbox'][1])
+                # print()
+                # print(curr['text'], curr['bbox'][-1])
+                # print(nxt['text'], nxt['bbox'][1])
+                # print('-------------------------------')
             else:
-                _, lower_ws, _ = None, curr['bboxh'], curr['bboxh']
+                _, lower_ws, total = None, curr['bboxh'], curr['bboxh']
 
             curr['whitespace'] = lower_ws
         return clean_lines
@@ -289,7 +471,7 @@ class Pdf2Markdown:
             caps_ratio += 0.5
         return caps_ratio
 
-    def _has_end_punctuation(self, str: str):
+    def _end_punctuation(self, str: str):
         pattern_match = re.search(r'[.,;:]$', str.strip())
         if pattern_match:
             return 1.0
@@ -363,11 +545,19 @@ class Pdf2Markdown:
 
         return block
 
+    def _isnum(self, s: str):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
+
     def _handle_page(self, pno: int) -> List[LineVector]:
         '''
         wraps page with <start_of_page>...handle_blocks...</end_of_page> tags for llm understanding
         '''
-        blocks = [self._merge_lines(block) for block in self.doc.load_page(pno).get_textpage().extractDICT().get('blocks', [])]
+        blocks = [self._merge_lines(block) for block in self.doc.load_page(
+            pno).get_textpage().extractDICT().get('blocks', [])]
         mask_bboxes = [table.bbox for table in self.doc.load_page(pno).find_tables()]
         line_vectors = []
         for block in blocks:
@@ -435,12 +625,12 @@ class Pdf2Markdown:
         line_vector['caps_ratio'] = self._caps_ratio(''.join(line_vector['text'].split('*')).strip())
         line_vector['weight'] = line_vector['bold'] + line_vector['italics']
         line_vector['ignore'] = self._ignore_bboxes(line_vector, mask_bboxes)
-        line_vector['end_punctuation'] = self._has_end_punctuation(line_vector['text'])
+        line_vector['end_punctuation'] = self._end_punctuation(line_vector['text'])
         line_vector['bboxh'] = np.log(abs(line_vector['bbox'][1] - line_vector['bbox'][3]))
         line_vector['start'] = 0.0 # defines whether a line is the first in the block of text
         toi = ''.join(line_vector['text'].split('*')).strip()
         toi = ''.join(toi.split('</BR>')).strip()
-        line_vector['entropy'] = self._apply_heading_heuristics(toi)
+        line_vector['entropy'] = self._score_heading_candidate(toi)
         if line_vector['text'][0] == '#':
             line_vector['text'] = f"`{line_vector['text']}`"
         if line_vector['bold'] and line_vector['text'] != '</BR>':
@@ -494,28 +684,34 @@ class Pdf2Markdown:
      ##################### Logistic Regression ############################
 
     def _augment_dfoc(self, df:pd.DataFrame):
-        # Add bucket w.r.t. paragraph size (i.e. <, ==, >)
-        def bucketize(d):
+        # Add bucket to paragraph size (i.e. <, ==, >)
+        def dist2par(d):
             p = df.loc[df['size'] != 0, 'size'].mode().iloc[0]
             if d < p:
                 return 0.0
             if d == p:
                 return 0.5
             if d > p:
-                return 1.0
+                return 1.0 
         
-        df.loc[:, 'dist2par'] = df['size'].apply(bucketize)
+        df.loc[:, 'dist2par'] = df['size'].apply(dist2par)
         df.loc[df['entropy'] > 0, 'entropy'] = df['entropy'] + df['dist2par']
         return df
+
+    def _is_title(self, string:str):
+        ignore = {'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in', 'nor', 'of', 'on', 'or', 'so', 'the', 'to', 'up', 'yet', 'over', 'with', 'into', 'onto', 'from', 'than', 'via'}
+        for word in string.split(' '):
+            if not word[0].isupper() and word not in ignore:
+                return False
+        return True
 
     ###############################################################################################################################
 
     def _predict(self):
         inference_data = self._get_inference_data(['size', 'entropy', 'weight', 'wc', 'flags', 'caps_ratio', 'dist2par', 'whitespace', 'page', 'text'])
         X = inference_data.drop(labels=['size', 'text', 'page'], axis=1)
-        if not self.model:
-            self.model = joblib.load('/Users/pepelopez/Documents/Programming/MoEtonomous/dev_tools/utils/model/logreg.pkl')
-        y_pred = self.model.predict(X)
+        model = joblib.load('/Users/pepelopez/Documents/Programming/MoEtonomous/dev_tools/utils/model/logreg.pkl')
+        y_pred = model.predict(X)
         inference_data['label'] = y_pred
         ham = inference_data[inference_data['label'] == 1]
         return ham
@@ -524,16 +720,23 @@ class Pdf2Markdown:
         # Filter out zero entropy lines
         X_raw = self.dfoc[self.dfoc['ignore'] == False]
         X_raw = X_raw[X_raw['entropy'] > 0]
-        # Select inference features
+        # Scale training features
         X_inference = X_raw.loc[:, features or self.features]
         return X_inference
     
-    def _get_training_data(self, features=[]):
-        # Select training features
-        X_train = self._get_inference_data(features=features + ['text'])
+    def _get_training_data(self, llm, features=[]):
+        # Filter out zero entropy lines
+        X_raw = self.dfoc[self.dfoc['ignore'] == False]
+        X_raw = X_raw[X_raw['entropy'] > 0]
+        # Scale training features
+        # X_train = self._scale_features(X_raw, features or self.features)
+        X_train = X_raw.loc[:, features or self.features]
+        X_train['text'] = X_raw.loc[:, 'text']
         # Get positive labels
-        positive_idxs = self._predict().index
+        # label_indices = [entry['line_number'] for entry in self._prune_toc_entries(llm, pca=0)]
+
         # Assign labels
         X_train['label'] = 0
-        X_train.loc[positive_idxs, 'label'] = 1
+        # X_train.loc[label_indices, 'label'] = 1
+
         return X_train
