@@ -70,7 +70,7 @@ sob['whitespace'] = 0.0
 class Pdf2Markdown:
     def __init__(self, pdf_path, verbose=False):
         self.doc = fitz.open(pdf_path)
-        self.features = ['entropy']
+        self.features = ['size', 'entropy', 'weight', 'wc', 'flags', 'caps_ratio', 'dist2par', 'whitespace', 'page', 'text']
         self.verbose = verbose
         self.dfoc = self.run_etl(dropna=True)
         self.model = None
@@ -511,7 +511,7 @@ class Pdf2Markdown:
     ###############################################################################################################################
 
     def _predict(self):
-        inference_data = self._get_inference_data(['size', 'entropy', 'weight', 'wc', 'flags', 'caps_ratio', 'dist2par', 'whitespace', 'page', 'text'])
+        inference_data = self._get_inference_data(self.features)
         X = inference_data.drop(labels=['size', 'text', 'page'], axis=1)
         if not self.model:
             self.model = joblib.load('/Users/pepelopez/Documents/Programming/MoEtonomous/dev_tools/utils/model/logreg.pkl')
