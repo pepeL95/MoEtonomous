@@ -546,7 +546,8 @@ class Pdf2Markdown:
         inference_data = self._get_inference_data(self.features)
         X = inference_data.drop(labels=['size', 'text', 'page'], axis=1)
         if not self.model:
-            self.model = joblib.load('/Users/pepelopez/Documents/Programming/MoEtonomous/dev_tools/utils/model/logreg.pkl')
+            model_path = os.path.join(os.path.dirname(__file__), "model", "logreg.pkl")
+            self.model = joblib.load(model_path)
         y_pred = self.model.predict(X)
         inference_data['label'] = y_pred
         ham = inference_data[inference_data['label'] == 1]
