@@ -201,7 +201,7 @@ class Pdf2Markdown:
         token_count = len(tokens)
         word_count = len(words)
 
-        if not words or len(string.strip()) < 3:
+        if not words or len(clean_str) < 3:
             return 0.0
 
         if word_count / token_count < 0.5:
@@ -277,7 +277,7 @@ class Pdf2Markdown:
         return word_count
     
     def _caps_ratio(self, str: str):
-        ignore = {'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in', 'nor', 'of', 'on', 'or', 'so', 'the', 'to', 'up', 'yet', 'over', 'with', 'into', 'onto', 'from', 'than', 'via'}
+        ignore = {'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in', 'nor', 'of', 'on', 'or', 'so', 'the', 'to', 'up', 'yet', 'over', 'with', 'without', 'into', 'onto', 'from', 'than', 'via'}
         clean_str = str.strip()
         words = re.findall(r'\b[a-zA-Z]+\b', clean_str)
         words = [word for word in words if word not in ignore]
@@ -304,19 +304,19 @@ class Pdf2Markdown:
             return title_score + weight * 0.5
 
         # Identify potential heading lines (sliding window = 3)
-        loi = {'</BR>', '<start_of_block>'}
+        ignore = {'</BR>', '<start_of_block>'}
         for i in range(len(block) - 2):
             curr = block[i + 1]  # vector
             prefix = block[i]['text'].strip()  # string
             suffix = block[i + 2]  # vector
 
             # Ignore unimporant lines
-            if curr['text'].strip() in loi.union('<end_of_block>'):
+            if curr['text'].strip() in ignore.union('<end_of_block>'):
                 curr['entropy'] = 0.0
                 continue
-
-            # Good candidate if preceded by </BR> or <start_of_block>
-            if prefix in loi:
+            
+            # Note: Good candidate if preceded by </BR> or <start_of_block>
+            if prefix in ignore:
                 v0 = np.array([
                     curr.get('size', 0.0),
                     curr.get('weight', 0.0),
@@ -333,16 +333,16 @@ class Pdf2Markdown:
 
                 # If equal syntactically, treat current line as paragraph text
                 if sim == 1.0:
-                    # Note: We exclude fully consecutive bolded lines, since those are good headings candidates
-                    if suffix.get('bold', 0.0):
+                    # Note: We exclude fully consecutive weighted lines, since those are good headings candidates
+                    if suffix.get('weight', 0.0):
                         curr['text'] = f"{curr['text']} {suffix['text']}"
                         curr['start'] = 1.0
                         suffix['text'] = ''
                     else:
                         curr['start'] = curr.get('start', 0.0)
 
-                # If highly similar (i.e. not same) but bolded, treat both as heading
-                elif sim > 0.8 and suffix.get('bold', 0.0):
+                # If highly similar (i.e. not same) but weighted, treat both as a single heading candidate
+                elif sim > 0.8 and suffix.get('weight', 0.0):
                     curr['start'] = 1.0
                     suffix['start'] = 1.0
 
@@ -394,8 +394,36 @@ class Pdf2Markdown:
         return lines
 
     def _handle_line(self, line: List[Span], pno: int, mask_bboxes) -> LineVector:
+        def process_txt(line):
+            _bolded = False # represents the start of a bolded text **<text>
+            bolded_ = False # represents the end of a bolded text <text>**
+            txt = ''
+            for span in line:
+                match = is_bold(span=span)
+                if match:
+                    # Started run already
+                    if _bolded:
+                        _bolded = False
+                        bolded_ = True
+                    
+                    # Need to start run
+                    else:
+                        _bolded = True
+                        bolded_ = False
+                
+                if _bolded:
+                    txt += '**' + span['text']
+                elif bolded_:
+                    txt += span['text'] + '**'
+                else:
+                    txt += span['text']
+                
+            # Return a single lined, md-styled text
+            return txt.strip()
+                
+
         def is_bold(span):
-            # Dont consider weird unbolded items as a logic-breaking pivot
+            # Don't consider weird unweighted items as a logic-breaking pivot
             # Note: '!' is a special character used by PyMuPDF for unknown ascii codes
             if span['text'].strip() in {'</BR>', '!', ''}:
                 return True
@@ -413,7 +441,7 @@ class Pdf2Markdown:
 
         # Reduce...
         line_vector = LineVector()
-        line_vector['text'] = ''.join(span['text'] for span in line).strip()
+        line_vector['text'] = process_txt(line=line)
         line_vector['bold'] = 1.0 * all(is_bold(span) for span in line)
         line_vector['italics'] = 1.0 * all(is_italic(span) for span in line)
         line_vector['font'] = line[0]['font']
@@ -441,10 +469,10 @@ class Pdf2Markdown:
         toi = ''.join(line_vector['text'].split('*')).strip()
         toi = ''.join(toi.split('</BR>')).strip()
         line_vector['entropy'] = self._apply_heading_heuristics(toi)
-        if line_vector['text'][0] == '#':
-            line_vector['text'] = f"`{line_vector['text']}`"
+        if toi and toi[0] == '#':
+            line_vector['text'] = f"`{toi}`"
         if line_vector['bold'] and line_vector['text'] != '</BR>':
-            line_vector['text'] = f"**{line_vector['text']}**"
+            line_vector['text'] = f"**{toi}**"
         if line_vector['italics'] and line_vector['text'] != '</BR>':
             line_vector['text'] = f"*{line_vector['text']}*"
             line_vector['size'] -= 0.01
@@ -454,6 +482,10 @@ class Pdf2Markdown:
         '''
         Merges lines by y0 (..if on the same column - in multi-column documents)
         '''
+        # Only process text blocks
+        if block['type'] != 0:
+            return
+        
         true_lines = {}
         for line in block.get('lines', []):
             y0, y1 = int(line['bbox'][1]), int(line['bbox'][3])
