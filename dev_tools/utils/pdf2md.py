@@ -8,6 +8,21 @@ from rapidfuzz import fuzz, process
 from typing import List, Tuple, TypedDict, Dict, Union
 from dev_tools.utils.clifont import print_bold, CLIFont
 
+class UnionFind:
+    def __init__(self, n):
+        self.parent = list(range(n))
+
+    def find(self, u):
+        while self.parent[u] != u:
+            self.parent[u] = self.parent[self.parent[u]]
+            u = self.parent[u]
+        return u
+
+    def union(self, u, v):
+        pu, pv = self.find(u), self.find(v)
+        if pu != pv:
+            self.parent[pu] = pv
+
 class Span(TypedDict):
     # canonical span
     size: float
@@ -66,6 +81,21 @@ sob['italics'] = 0
 sob['start'] = 0.0
 sob['entropy'] = 0.0
 sob['whitespace'] = 0.0
+
+# Characters recognized as bullets when starting a line.
+BULLET_TOKENS = (
+    "- ",
+    "* ",
+    "> ",
+    chr(0xB6),   # ¶
+    chr(0xB7),   # ·
+    chr(8224),   # †
+    chr(8225),   # ‡
+    chr(8226),   # •
+    chr(0xF0A7), # 
+    chr(0xF0B7), # 
+    *map(chr, range(9632, 9680))  # Unicode block elements
+)
 
 class Pdf2Markdown:
     def __init__(self, pdf_path, verbose=False):
@@ -141,22 +171,18 @@ class Pdf2Markdown:
             candidates = df[df['page'] == (toc_page - 1)]
 
             # Prepare a list of lines to match against
-            candidate_texts = candidates['text'].apply(
-                lambda txt: ''.join(txt.split('*')).upper()).tolist()
+            candidate_texts = candidates['text'].apply(lambda txt: ''.join(txt.split('*')).upper()).tolist()
             # Use RapidFuzz to efficiently find the best match
-            match = process.extractOne(
-                toc_text, candidate_texts, scorer=fuzz.token_set_ratio
-            )
-            
+            match = process.extractOne(toc_text, candidate_texts, scorer=fuzz.token_set_ratio)
+            print(toc_text, toc_page)
             if match and match[1] >= min_score:
                 matched_text = match[0]
-                idx = candidates[candidates['text'].apply(
-                    lambda txt: ''.join(txt.split('*')).upper()) == matched_text].index
+                idx = candidates[candidates['text'].apply(lambda txt: ''.join(txt.split('*')).upper()) == matched_text].index
                 if not idx.empty:
                     matches.append({
                         'index': idx[0],
                         'level': level,
-                        'text': f"\n{(level + 1) * '#'} {''.join(matched_text.split('*'))}\n",
+                        'text': f"\n{(level + 1) * '#'} {''.join(matched_text.split('*')).strip()}\n",
                         'page': toc_page,
                         'similarity': match[1]/100
                     })
@@ -367,13 +393,13 @@ class Pdf2Markdown:
         '''
         wraps page with <start_of_page>...handle_blocks...</end_of_page> tags for llm understanding
         '''
-        blocks = [self._merge_lines(block) for block in self.doc.load_page(pno).get_textpage().extractDICT().get('blocks', [])]
+        blocks = [self._merge_lines(block['lines']) for block in self.doc.load_page(pno).get_textpage().extractDICT().get('blocks', [])]
         mask_bboxes = [table.bbox for table in self.doc.load_page(pno).find_tables()]
         line_vectors = []
         for block in blocks:
             block_ = self._handle_block(block, pno, mask_bboxes)
             line_vectors.extend(block_)
-
+        line_vectors = self._compute_heading_entropy(line_vectors)
         line_vectors = self._compute_whitespace(line_vectors)
         return line_vectors
 
@@ -382,76 +408,60 @@ class Pdf2Markdown:
         wraps block with <start_of_block>...handle_lines...</end_of_block> tags for llm understanding
         '''
         lines = []
-
         # Process lines
         lines.append(sob)
         for line in block.get('lines', []):
             lines.append(self._handle_line(line, pno, mask_bboxes))
         lines.append(eob)
-
-        # Predict first lines of a true text block
-        lines = self._compute_heading_entropy(lines)
         return lines
 
-    def _handle_line(self, line: List[Span], pno: int, mask_bboxes) -> LineVector:
+    def _handle_line(self, line, pno: int, mask_bboxes) -> LineVector:
         def process_txt(line):
-            _bolded = False # represents the start of a bolded text **<text>
-            bolded_ = False # represents the end of a bolded text <text>**
             txt = ''
             for span in line:
-                match = is_bold(span=span)
-                if match:
-                    # Started run already
-                    if _bolded:
-                        _bolded = False
-                        bolded_ = True
-                    
-                    # Need to start run
-                    else:
-                        _bolded = True
-                        bolded_ = False
-                
-                if _bolded:
-                    txt += '**' + span['text']
-                elif bolded_:
-                    txt += span['text'] + '**'
+                clean_txt = span['text'].strip()
+                bold_match = clean_txt and is_bold(span=span)
+                if clean_txt.startswith(BULLET_TOKENS):
+                    clean_txt = clean_txt[1:]
+                    txt += '- '
+                if bold_match:
+                    txt += '**' + clean_txt + '** '
                 else:
-                    txt += span['text']
-                
-            # Return a single lined, md-styled text
-            return txt.strip()
-                
+                    txt += clean_txt
+            if txt == '- ':
+                pass
+            return txt
 
         def is_bold(span):
             # Don't consider weird unweighted items as a logic-breaking pivot
             # Note: '!' is a special character used by PyMuPDF for unknown ascii codes
             if span['text'].strip() in {'</BR>', '!', ''}:
                 return True
-            return any(bold_match in span['font'] for bold_match in ["Bold", "TB", "Medi", "CMB"])
+            return (span["flags"] & 16) or (span["char_flags"] & 8)
 
         def is_italic(span):
             # Note '!' is a special character for unknown ascii codes
             if span['text'].strip() in {'</BR>', '!'}:
                 return True
-            return any(bold_match in span['font'] for bold_match in ["oblique", "CMTI", "CMMI", "Ital"])
+            return span["flags"] & 2
 
         # Handle breaklines
-        if line and not line[0]['text'].strip():
-            line[0]['text'] = '</BR>'
+        if line.get('spans') and not line['spans'][0]['text'].strip():
+            line['spans'][0]['text'] = '\n'
 
         # Reduce...
         line_vector = LineVector()
-        line_vector['text'] = process_txt(line=line)
-        line_vector['bold'] = 1.0 * all(is_bold(span) for span in line)
-        line_vector['italics'] = 1.0 * all(is_italic(span) for span in line)
-        line_vector['font'] = line[0]['font']
-        line_vector['color'] = line[0]['color']
-        line_vector['size'] = line[0]['size']
-        line_vector['flags'] = line[0]['flags']
-        line_vector['ascender'] = line[0]['ascender']
-        line_vector['descender'] = line[0]['descender']
-        line_vector['origin'] = line[0]['origin']
-        line_vector['bbox'] = line[0]['bbox']
+        line_vector['text'] = process_txt(line=line['spans'])
+        line_vector['bold'] = 1.0 * all(is_bold(span) for span in line['spans'])
+        line_vector['italics'] = 1.0 * all(is_italic(span) for span in line['spans'])
+        line_vector['font'] = line['spans'][0]['font']
+        line_vector['color'] = line['spans'][0]['color']
+        line_vector['size'] = line['spans'][0]['size']
+        line_vector['flags'] = line['spans'][0]['flags']
+        line_vector['ascender'] = line['spans'][0]['ascender']
+        line_vector['descender'] = line['spans'][0]['descender']
+        line_vector['origin'] = line['spans'][0]['origin']
+        line_vector['bbox'] = line['spans'][0]['bbox']
         line_vector['page'] = pno
 
         # Augment...
@@ -466,48 +476,74 @@ class Pdf2Markdown:
         line_vector['end_punctuation'] = self._has_end_punctuation(line_vector['text'])
         line_vector['bboxh'] = np.log(abs(line_vector['bbox'][1] - line_vector['bbox'][3]))
         line_vector['start'] = 0.0 # defines whether a line is the first in the block of text
-        toi = ''.join(line_vector['text'].split('*')).strip()
-        toi = ''.join(toi.split('</BR>')).strip()
-        line_vector['entropy'] = self._apply_heading_heuristics(toi)
-        if toi and toi[0] == '#':
-            line_vector['text'] = f"`{toi}`"
-        if line_vector['bold'] and line_vector['text'] != '</BR>':
-            line_vector['text'] = f"**{toi}**"
-        if line_vector['italics'] and line_vector['text'] != '</BR>':
-            line_vector['text'] = f"*{line_vector['text']}*"
+        unbloded = ''.join(line_vector['text'].split('*')).strip()
+        unbroken = ''.join(unbloded.split('</BR>')).strip()
+        line_vector['entropy'] = self._apply_heading_heuristics(unbroken)
+        if unbroken and unbroken[0] == '#':
+            line_vector['text'] = f"`{unbroken}`"
+        if line_vector['bold'] and unbloded:
+            line_vector['text'] = f"**{unbloded}**"
+        if line_vector['italics'] and unbloded:
+            line_vector['text'] = f"_{line_vector['text']}_"
             line_vector['size'] -= 0.01
         return line_vector
 
-    def _merge_lines(self, block: List) -> List:
-        '''
-        Merges lines by y0 (..if on the same column - in multi-column documents)
-        '''
-        # Only process text blocks
-        if block['type'] != 0:
-            return
-        
-        true_lines = {}
-        for line in block.get('lines', []):
-            y0, y1 = int(line['bbox'][1]), int(line['bbox'][3])
+    def _y_overlap(self, box1, box2, threshold=0.8):
+        _, y1_min, _, y1_max = box1
+        _, y2_min, _, y2_max = box2
 
-            # Mapping out new lines by their y0, in order to merge lines (+/-1)
-            if not y0 in true_lines:
-                true_lines[y0] = line.get('spans', [])
+        overlap_start = max(y1_min, y2_min)
+        overlap_end = min(y1_max, y2_max)
 
-            # The following lines should be merged (unless document is column-designed)
-            else:
-                if len(line.get('spans', [])):
-                    # prev word and next word must be in the same half of the page
-                    doc_with = self.doc[0].bound()[2] - self.doc[0].bound()[0]
-                    if (
-                        true_lines[y0][-1]['bbox'][2] > doc_with / 2 and line['spans'][0]['bbox'][0] > doc_with / 2 or
-                        true_lines[y0][-1]['bbox'][2] < doc_with /
-                            2 and line['spans'][0]['bbox'][0] < doc_with / 2
-                    ):
-                        line['spans'][0]['text'] = f" {line['spans'][0]['text']}"
-                        true_lines[y0].extend(line['spans'])
+        if overlap_start >= overlap_end:
+            return False
 
-        return {'lines': list(true_lines.values())}
+        overlap = overlap_end - overlap_start
+        min_height = min(y1_max - y1_min, y2_max - y2_min)
+
+        return overlap >= threshold * min_height
+
+    def _merge_lines(self, lines, threshold=0.8):
+        """
+        Merge lines by Y overlap. Input: list of dicts with 'text' and 'bbox'.
+        Output: {'lines': [ {'text': ..., 'bbox': [...]}, ... ]}
+        """
+        if not lines:
+            return {'lines': []}
+
+        n = len(lines)
+        uf = UnionFind(n)
+
+        for i in range(n):
+            for j in range(i + 1, n):
+                if self._y_overlap(lines[i]['bbox'], lines[j]['bbox'], threshold):
+                    uf.union(i, j)
+
+        groups = {}
+        for i in range(n):
+            root = uf.find(i)
+            groups.setdefault(root, []).append(lines[i])
+
+        merged = []
+        for group in groups.values():
+            group_sorted = sorted(group, key=lambda x: x['bbox'][0])  # left to right
+            merged_text = " ".join(
+                ' '.join(span['text'].strip() for span in line.get('spans', []))
+                for line in group_sorted
+            )
+            merged_bbox = [
+                min(line['bbox'][0] for line in group),
+                min(line['bbox'][1] for line in group),
+                max(line['bbox'][2] for line in group),
+                max(line['bbox'][3] for line in group),
+            ]
+            merged.append({
+                'text': merged_text,
+                'bbox': merged_bbox,
+                'spans': sum([line.get('spans', []) for line in group_sorted], [])
+            })
+
+        return {'lines': merged}
 
     def _ignore_bboxes(self, line_vector: LineVector, bboxes: List[any]) -> bool:
         x0, y0 = line_vector['origin']
@@ -540,6 +576,30 @@ class Pdf2Markdown:
         df.loc[df['entropy'] > 0, 'entropy'] = df['entropy'] + df['dist2par']
         return df
 
+    def _merge_consecutive_rows(self, df, text_col='text'):
+        """
+        Merge consecutive rows in a DataFrame based on consecutive index values,
+        concatenating their text, and retaining the first row's non-text values.
+        """
+        if df.empty:
+            return df
+
+        df_sorted = df.sort_index()
+
+        # Identify groups of consecutive rows
+        idx_diff = df_sorted.index.to_series().diff().ne(1).cumsum()
+
+        # Group by the identifier and aggregate
+        ignore = {text_col, 'label'}
+        grouped = df_sorted.groupby(idx_diff)
+        merged = grouped.agg({
+            **{col: 'first' for col in df.columns if col not in ignore},
+            text_col: ' '.join,
+            'label': 'first',
+        })
+
+        return merged
+    
     ###############################################################################################################################
 
     def _predict(self):
@@ -551,6 +611,7 @@ class Pdf2Markdown:
         y_pred = self.model.predict(X)
         inference_data['label'] = y_pred
         ham = inference_data[inference_data['label'] == 1]
+        ham = self._merge_consecutive_rows(ham)
         return ham
 
     def _get_inference_data(self, features=[]):
