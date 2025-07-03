@@ -1,6 +1,7 @@
 # Customs
 *.dev.*
 *.dev.*/
+.dev*
 .vscode
 
 # Byte-compiled / optimized / DLL files
